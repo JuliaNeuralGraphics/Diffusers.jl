@@ -1,0 +1,13 @@
+name = "Diffusers"
+uuid = "8a41e116-7555-4e59-b311-944c7420dac5"
+authors = ["Harish Anand"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
