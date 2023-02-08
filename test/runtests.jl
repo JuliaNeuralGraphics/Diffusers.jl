@@ -9,6 +9,9 @@ using Diffusers.torch
     @testset "torch.Conv2d" begin
         include("torch/test_conv.jl")
     end
+    @testset "torch.Linear" begin
+        include("torch/test_linear.jl")
+    end
     @testset "utils.jl" begin
         include("test_utils.jl")
     end    
