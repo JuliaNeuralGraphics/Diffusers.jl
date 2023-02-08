@@ -3,14 +3,17 @@ Supports loading PyTorch trained modules and do forward in julia.
 """
 module torch
 
+using Flux
 using NNlib
 using Functors
 using Transformers
 
 export 
     Conv2d,
-    Linear
+    Linear,
+    ModuleList
 
 include("conv.jl")
 include("linear.jl")
+include("modulelist.jl")
 end
