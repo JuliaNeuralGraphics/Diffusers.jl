@@ -1,6 +1,10 @@
 module Diffusers
 
+export 
+    load_pretrained_model, 
+    nn
+
 include("utils.jl")
-export load_pretrained_model
+include("torch/nn.jl")
 
 end
