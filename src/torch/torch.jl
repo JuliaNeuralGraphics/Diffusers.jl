@@ -8,7 +8,9 @@ using Functors
 using Transformers
 
 export 
-    Conv2d
+    Conv2d,
+    Linear
 
 include("conv.jl")
+include("linear.jl")
 end
