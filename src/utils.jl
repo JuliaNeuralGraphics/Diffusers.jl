@@ -1,13 +1,10 @@
-using Transformers
-
-
 """
     load_pretrained_model(model_name::String, config::String, bin_file::String)
 
 Loads config and model state dict from HuggingFace library.
 For example:
 ```julia
-state_dict, cfg = load_pretrained_model("runwayml/stable-diffusion-v1-5", "unet/config.json", "unet/diffusion_pytorch_model.bin")
+julia> state_dict, cfg = load_pretrained_model("runwayml/stable-diffusion-v1-5", "unet/config.json", "unet/diffusion_pytorch_model.bin")
 ```
 
 """

@@ -1,10 +1,12 @@
 module Diffusers
+using Transformers
+using NNlib
 
 export 
     load_pretrained_model, 
-    nn
+    torch
 
 include("utils.jl")
-include("torch/nn.jl")
+include("torch/torch.jl")
 
 end
