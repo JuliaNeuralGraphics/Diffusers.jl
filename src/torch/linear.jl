@@ -1,6 +1,8 @@
 
 # torch.Linear
-# Similar implementation https://github.com/chengchingwen/Transformers.jl/blob/master/src/huggingface/models/base.jl#L39
+# Similar implementation 
+# https://github.com/chengchingwen/Transformers.jl/blob/8de6eb7d3f03b94fb1077588a960803f37f08496/src/huggingface/models/base.jl#L39
+# MIT License
 """
     torch.Linear(weight, bias)
 Create a torch.Linear module with weight (out_features, in_features) and bias (out_features,).
@@ -40,6 +42,7 @@ function (l::Linear)(x::AbstractArray)
     return reshape(y, new_size)
 end
 
+# load_state has been changed for bias
 function load_state!(layer::Linear, state)
   for k in keys(state)
     key = getfield(layer, k)  # name
