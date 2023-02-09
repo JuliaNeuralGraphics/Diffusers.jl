@@ -16,6 +16,9 @@ using Diffusers.torch
     @testset "torch.ModuleList" begin
         include("torch/test_modulelist.jl")
     end
+    @testset "models.CrossAttention" begin
+        include("models/test_cross_attention.jl")
+    end    
     @testset "utils.jl" begin
         include("test_utils.jl")
     end    

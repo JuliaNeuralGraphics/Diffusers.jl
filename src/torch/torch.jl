@@ -13,6 +13,8 @@ export
     Linear,
     ModuleList
 
+load_state!(layer::Any, state::Any) = Transformers.HuggingFace.load_state!(layer, state)
+
 include("conv.jl")
 include("linear.jl")
 include("modulelist.jl")

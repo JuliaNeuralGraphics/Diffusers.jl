@@ -22,6 +22,10 @@ struct Linear{W<:AbstractArray, B<:Union{Nothing, AbstractArray}}
 end
   
 Linear(w) = Linear(w, nothing)
+Linear(in::Int, out::Int; bias::Bool=true) = Linear(in, out, bias)
+function Linear(in::Int, out::Int, bias::Bool) 
+    bias ? Linear(rand(out, in), rand(out, 1)) : Linear(rand(out, in), nothing)
+end
 
 _has_bias(::Linear{W, Nothing}) where {W<:AbstractArray}= false
 _has_bias(::Linear) = true
@@ -50,6 +54,6 @@ function load_state!(layer::Linear, state)
     if k == :bias
         val = reshape(val, (size(val)[1], 1)) # bias is 1 dim, changed to (out_features, 1)
     end
-    Transformers.HuggingFace.load_state!(key, val)
+    load_state!(key, val)
   end
 end
