@@ -48,6 +48,6 @@ function load_state!(layer::Conv2d, state)
         key = getfield(layer, nk) # name
         val = getfield(state, k)  # tensor
     end
-    Transformers.HuggingFace.load_state!(key, val)
+    load_state!(key, val)
     end
 end
