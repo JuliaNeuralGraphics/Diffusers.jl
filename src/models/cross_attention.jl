@@ -84,6 +84,16 @@ function (attn::CrossAttention)(
     key = attn.to_k(encoder_hidden_states)
     value = attn.to_v(encoder_hidden_states)
     # attention
-    NNlib.dot_product_attention(query, key, value, nheads=attn.heads)
+    hidden_states, scores = NNlib.dot_product_attention(query, key, value, nheads=attn.heads)
+    hidden_states = attn.to_out[1](hidden_states)
+    hidden_states = attn.to_out[2](hidden_states)
+    return hidden_states
 end
 
+function load_state!(attn::CrossAttention, state)
+    for k in keys(state)
+        key = getfield(attn, k)
+        val = getfield(state, k)
+        torch.load_state!(key, val)
+      end
+end
