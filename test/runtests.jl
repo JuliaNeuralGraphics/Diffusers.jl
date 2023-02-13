@@ -5,6 +5,7 @@ using Transformers
 using NNlib
 using Flux
 using Diffusers.torch
+using Diffusers.models
 
 @testset "Diffusers.jl" begin
     @testset "torch.Conv2d" begin
@@ -18,6 +19,9 @@ using Diffusers.torch
     end
     @testset "models.CrossAttention" begin
         include("models/test_cross_attention.jl")
+    end
+    @testset "models.GEGLU" begin
+        include("models/test_geglu.jl")
     end    
     @testset "utils.jl" begin
         include("test_utils.jl")
