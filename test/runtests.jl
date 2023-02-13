@@ -22,6 +22,9 @@ using Diffusers.models
     end
     @testset "models.GEGLU" begin
         include("models/test_geglu.jl")
+    end
+    @testset "models.FeedForward" begin
+        include("models/test_feedforward.jl")
     end    
     @testset "utils.jl" begin
         include("test_utils.jl")

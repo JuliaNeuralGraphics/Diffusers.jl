@@ -12,7 +12,8 @@ module models
 
     export
     CrossAttention,
-    GEGLU
+    GEGLU,
+    FeedForward
 
     include("cross_attention.jl")
     include("attention.jl")
