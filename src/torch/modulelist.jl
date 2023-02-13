@@ -29,6 +29,7 @@ end
   
 function load_state!(layer::ModuleList, state)
     for (layerᵢ, stateᵢ) in zip(layer, state)
+        # TODO: handle cases where layer is missing
         load_state!(layerᵢ, stateᵢ)
     end
 end

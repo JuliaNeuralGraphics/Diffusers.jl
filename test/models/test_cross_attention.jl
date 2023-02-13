@@ -1,7 +1,3 @@
-using Diffusers: load_pretrained_model
-using Diffusers.models
-
-
 @testset "Load SD cross_attention & do a forward"  begin
     state_dict, cfg = load_pretrained_model("runwayml/stable-diffusion-v1-5", "unet/config.json", "unet/diffusion_pytorch_model.bin")
     attn = CrossAttention(320; dim_head=40)

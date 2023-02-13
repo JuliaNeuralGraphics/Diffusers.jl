@@ -5,12 +5,15 @@ module models
 
     using Flux
     using NNlib
+    using MLUtils
     using Functors
     using Transformers
     using ..torch
 
     export
-    CrossAttention
+    CrossAttention,
+    GEGLU
 
     include("cross_attention.jl")
+    include("attention.jl")
 end
