@@ -28,9 +28,12 @@ function get_state_dict(state, prefix, modulelist::ModuleList)
 end
   
 function load_state!(layer::ModuleList, state)
-    for (layerᵢ, stateᵢ) in zip(layer, state)
+    for (i, layerᵢ) in enumerate(layer)
         # TODO: handle cases where layer is missing
-        load_state!(layerᵢ, stateᵢ)
+        if (typeof(layerᵢ) <: Flux.Dropout)
+            println("Flux.Dropout is not loaded.")
+        else 
+            load_state!(layerᵢ, state[i]) 
+        end
     end
-end
-  
+end  

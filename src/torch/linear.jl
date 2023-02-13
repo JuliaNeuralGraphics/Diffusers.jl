@@ -22,8 +22,8 @@ struct Linear{W<:AbstractArray, B<:Union{Nothing, AbstractArray}}
 end
   
 Linear(w) = Linear(w, nothing)
-Linear(in::Int, out::Int; bias::Bool=true) = Linear(in, out, bias)
-function Linear(in::Int, out::Int, bias::Bool) 
+Linear(in::Integer, out::Integer; bias::Bool=true) = Linear(in, out, bias)
+function Linear(in::Integer, out::Integer, bias::Bool) 
     bias ? Linear(rand(out, in), rand(out, 1)) : Linear(rand(out, in), nothing)
 end
 
