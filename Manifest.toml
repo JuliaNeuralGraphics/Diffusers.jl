@@ -10,6 +10,11 @@ git-tree-sha1 = "69f7020bd72f069c219b5e8c236c1fa90d2cb409"
 uuid = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 version = "1.2.1"
 
+[[deps.AbstractTrees]]
+git-tree-sha1 = "faa260e4cb5aba097a73fab382dd4b5819d8ec8c"
+uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+version = "0.4.4"
+
 [[deps.Accessors]]
 deps = ["Compat", "CompositionsBase", "ConstructionBase", "Dates", "InverseFunctions", "LinearAlgebra", "MacroTools", "Requires", "StaticArrays", "Test"]
 git-tree-sha1 = "b9661b900b50ba475145b311a9a0ef9d2a9c85ea"
@@ -57,6 +62,11 @@ deps = ["LinearAlgebra", "Printf", "Random", "Test"]
 git-tree-sha1 = "a598ecb0d717092b5539dbbe890c98bac842b072"
 uuid = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
 version = "0.2.0"
+
+[[deps.BSON]]
+git-tree-sha1 = "86e9781ac28f4e80e9b98f7f96eae21891332ac2"
+uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+version = "0.3.6"
 
 [[deps.BangBang]]
 deps = ["Compat", "ConstructionBase", "Future", "InitialValues", "LinearAlgebra", "Requires", "Setfield", "Tables", "ZygoteRules"]
@@ -376,9 +386,9 @@ version = "1.1.3"
 
 [[deps.Functors]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "61fa9cf802d35fe1b5b8ea9fbaac4b8f020d19b1"
+git-tree-sha1 = "a2657dd0f3e8a61dbe70fc7c122038bd33790af5"
 uuid = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
-version = "0.4.2"
+version = "0.3.0"
 
 [[deps.Future]]
 deps = ["Random"]
@@ -882,9 +892,9 @@ version = "1.2.0"
 
 [[deps.NeuralAttentionlib]]
 deps = ["Adapt", "CUDA", "ChainRulesCore", "GPUArraysCore", "LinearAlgebra", "NNlib", "NNlibCUDA", "Requires", "Static"]
-git-tree-sha1 = "53e134a64bb460cbb5e208453feda331da0cf320"
+git-tree-sha1 = "0737b1d2587c00d89a4be9abf2e28c9a4a54825c"
 uuid = "12afc1b8-fad6-47e1-9132-84abc478905f"
-version = "0.2.4"
+version = "0.1.5"
 
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
@@ -1212,9 +1222,9 @@ version = "0.1.1"
 
 [[deps.Static]]
 deps = ["IfElse"]
-git-tree-sha1 = "c35b107b61e7f34fa3f124026f2a9be97dea9e1c"
+git-tree-sha1 = "03170c1e8a94732c1d835ce4c5b904b4b52cba1c"
 uuid = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
-version = "0.8.3"
+version = "0.7.8"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
@@ -1318,9 +1328,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.TextEncodeBase]]
 deps = ["FuncPipelines", "PartialFunctions", "PrimitiveOneHot", "StaticArrays", "StructWalk", "Unicode", "WordTokenizers"]
-git-tree-sha1 = "1304ca2c65d9b28c1e2a78cdf5032348c0c405e5"
+git-tree-sha1 = "dbae5e1859634adbf7d388b8b793b71baa2f9626"
 uuid = "f92c20c0-9f2a-4705-8116-881385faba05"
-version = "0.6.0"
+version = "0.5.12"
 
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "Mmap", "OffsetArrays", "PkgVersion", "ProgressMeter", "UUIDs"]
@@ -1353,10 +1363,12 @@ uuid = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 version = "0.4.75"
 
 [[deps.Transformers]]
-deps = ["Base64", "BytePairEncoding", "CUDA", "ChainRulesCore", "DataDeps", "DataStructures", "Dates", "DelimitedFiles", "DoubleArrayTries", "Fetch", "FillArrays", "Flux", "FuncPipelines", "Functors", "HTTP", "HuggingFaceApi", "JSON3", "LightXML", "LinearAlgebra", "Mmap", "NNlib", "NNlibCUDA", "NeuralAttentionlib", "Pickle", "Pkg", "PrimitiveOneHot", "Random", "SHA", "Static", "Statistics", "StringViews", "StructWalk", "TextEncodeBase", "Unicode", "ValSplit", "WordTokenizers"]
-git-tree-sha1 = "9ecd9bdcec5e9df870765553f150378460827202"
+deps = ["AbstractTrees", "Adapt", "BSON", "Base64", "BytePairEncoding", "CUDA", "ChainRulesCore", "DataDeps", "DataStructures", "Dates", "DelimitedFiles", "DoubleArrayTries", "Fetch", "Flux", "FuncPipelines", "Functors", "HTTP", "HuggingFaceApi", "InternedStrings", "JSON", "LightXML", "LinearAlgebra", "MacroTools", "Markdown", "NNlib", "NNlibCUDA", "NeuralAttentionlib", "Pickle", "Pkg", "PrimitiveOneHot", "Random", "Requires", "SHA", "Static", "Statistics", "StringViews", "StructWalk", "TextEncodeBase", "Unicode", "ValSplit", "WordTokenizers", "ZipFile"]
+git-tree-sha1 = "3c81f8f87e12c5b3129d51a30c64f6a13a39705e"
+repo-rev = "dev"
+repo-url = "https://github.com/harishanand95/Transformers.jl"
 uuid = "21ca0261-441d-5938-ace7-c90938fde4d4"
-version = "0.2.0"
+version = "0.1.25"
 
 [[deps.Tricks]]
 git-tree-sha1 = "6bac775f2d42a611cdfcd1fb217ee719630c4175"
@@ -1411,9 +1423,9 @@ version = "2.10.3+0"
 
 [[deps.ZipFile]]
 deps = ["Libdl", "Printf", "Zlib_jll"]
-git-tree-sha1 = "f492b7fe1698e623024e873244f10d89c95c340a"
+git-tree-sha1 = "3593e69e469d2111389a9bd06bac1f3d730ac6de"
 uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
-version = "0.10.1"
+version = "0.9.4"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
