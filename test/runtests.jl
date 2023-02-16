@@ -17,6 +17,9 @@ using Diffusers.models
     @testset "torch.ModuleList" begin
         include("torch/test_modulelist.jl")
     end
+    @testset "torch.LayerNorm" begin
+        include("torch/test_layernorm.jl")
+    end
     @testset "models.CrossAttention" begin
         include("models/test_cross_attention.jl")
     end
@@ -25,7 +28,10 @@ using Diffusers.models
     end
     @testset "models.FeedForward" begin
         include("models/test_feedforward.jl")
-    end    
+    end
+    @testset "models.BasicTransformerBlock" begin
+        include("models/test_basic_transformer_block.jl")
+    end
     @testset "utils.jl" begin
         include("test_utils.jl")
     end    
