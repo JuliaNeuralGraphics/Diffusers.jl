@@ -3,7 +3,7 @@ Supports loading PyTorch trained modules and do forward in julia.
 """
 module torch
 
-using Flux:Dropout
+using Flux:Dropout,GroupNorm
 using NNlib
 using Functors
 using Transformers
@@ -20,4 +20,5 @@ include("conv.jl")
 include("linear.jl")
 include("modulelist.jl")
 include("layernorm.jl")
+include("groupnorm.jl")
 end
