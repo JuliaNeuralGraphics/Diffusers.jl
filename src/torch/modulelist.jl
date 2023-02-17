@@ -42,8 +42,8 @@ function load_state!(layer::ModuleList, state)
         # TODO: handle cases where layer is missing
         if (typeof(layerᵢ) <: Dropout)
             println("WARN: Flux.Dropout is not loaded as there are no parameters in the state_dict.")
-        else 
+        else
             load_state!(layerᵢ, state[i]) 
         end
     end
-end  
+end
