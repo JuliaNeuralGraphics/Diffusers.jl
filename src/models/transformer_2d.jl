@@ -1,3 +1,12 @@
+"""
+    Transformer2DModel
+Transformer model for image-like data & continuous (actual embeddings) inputs.
+
+When input is continuous: First, project the input (aka embedding) and reshape to emb, seq_len, batch. 
+Then apply standard transformer action. Finally, reshape to image.
+
+NOTE: Discrete case is not implemented.
+"""
 struct Transformer2DModel
     use_linear_projection::Bool
     num_attention_heads::Integer
@@ -13,6 +22,28 @@ struct Transformer2DModel
     proj_out::Union{torch.Conv2d,torch.Linear}
 end
 
+"""
+    Transformer2DModel 
+
+# Arguments:
+    num_attention_heads: The number of heads to use for multi-head attention.
+    attention_head_dim: The number of channels in each head.
+    in_channels: Pass if the input is continuous. The number of channels in the input and output.
+    num_layers: The number of layers of Transformer blocks to use.
+    dropout: The dropout probability to use.
+    cross_attention_dim: The number of encoder_hidden_states dimensions to use.
+    sample_size: The width of the latent images.
+        Note that this is fixed at training time as it is used for learning a number of position embeddings. See
+        `ImagePositionalEmbeddings`.
+    activation_fn: Activation function to be used in feed-forward.
+    attention_bias: Configure if the TransformerBlocks' attention should contain a bias parameter.
+
+# Examples
+    ```julia
+    julia> Transformer2DModel(; num_attention_heads=8, attention_head_dim=40, in_channels=320, cross_attention_dim=768,)
+    ```
+
+"""
 function Transformer2DModel(;
     num_attention_heads::Integer = 16,
     attention_head_dim::Integer = 88,
