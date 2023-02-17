@@ -94,6 +94,6 @@ function load_state!(attn::CrossAttention, state)
     for k in keys(state)
         key = getfield(attn, k)
         val = getfield(state, k)
-        torch.load_state!(key, val)
+        load_state!(key, val)
       end
 end

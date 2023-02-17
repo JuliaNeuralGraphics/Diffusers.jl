@@ -20,6 +20,9 @@ using Diffusers.models
     @testset "torch.LayerNorm" begin
         include("torch/test_layernorm.jl")
     end
+    @testset "Flux.GroupNorm" begin
+        include("torch/test_groupnorm.jl")
+    end
     @testset "models.CrossAttention" begin
         include("models/test_cross_attention.jl")
     end
@@ -32,7 +35,10 @@ using Diffusers.models
     @testset "models.BasicTransformerBlock" begin
         include("models/test_basic_transformer_block.jl")
     end
+    @testset "models.Transformer2DModel" begin
+        include("models/test_transformer_2d.jl")
+    end    
     @testset "utils.jl" begin
         include("test_utils.jl")
-    end    
+    end
 end
