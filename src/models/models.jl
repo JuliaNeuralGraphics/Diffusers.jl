@@ -15,7 +15,8 @@ module models
     GEGLU,
     FeedForward,
     BasicTransformerBlock,
-    Transformer2DModel
+    Transformer2DModel,
+    ResnetBlock2D
 
     # All models in `models` module must call models.load_state!
     # Order: models.load_state! -> torch.load_state! -> Transformers.load_state!
@@ -37,4 +38,5 @@ module models
     include("cross_attention.jl")
     include("attention.jl")
     include("transformer_2d.jl")
+    include("resnet.jl")
 end
