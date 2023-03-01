@@ -37,6 +37,9 @@ using Diffusers.models
     end
     @testset "models.Transformer2DModel" begin
         include("models/test_transformer_2d.jl")
+    end
+    @testset "models.ResnetBlock2D" begin
+        include("models/test_resnet.jl")
     end    
     @testset "utils.jl" begin
         include("test_utils.jl")
