@@ -17,7 +17,8 @@ module models
     BasicTransformerBlock,
     Transformer2DModel,
     ResnetBlock2D,
-    CrossAttnDownBlock2D
+    CrossAttnDownBlock2D,
+    UNetMidBlock2DCrossAttn
 
     # All models in `models` module must call models.load_state!
     # Order: models.load_state! -> torch.load_state! -> Transformers.load_state!

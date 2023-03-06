@@ -27,9 +27,9 @@ using Diffusers.models
     @testset "models.CrossAttention" begin
         include("models/test_cross_attention.jl")
     end
-    @testset "models.CrossAttnDownBlock2D" begin
+    @testset "models.unet_2d" begin
         include("models/test_cross_atten_downblock2d.jl")
-    end    
+    end
     @testset "models.GEGLU" begin
         include("models/test_geglu.jl")
     end
