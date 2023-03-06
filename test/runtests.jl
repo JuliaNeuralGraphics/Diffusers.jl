@@ -16,9 +16,6 @@ const STATE_DICT, CFG = Diffusers.load_pretrained_model(
         include("model_load_utils.jl")
     end
 
-    # @testset "models.BasicTransformerBlock" begin
-    #     include("models/test_basic_transformer_block.jl")
-    # end
     # @testset "models.Transformer2DModel" begin
     #     include("models/test_transformer_2d.jl")
     # end

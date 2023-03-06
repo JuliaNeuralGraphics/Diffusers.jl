@@ -21,14 +21,25 @@
 #     @test y[1:5, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
 # end
 
-@testset "Load SD BasicTransformerBlock & do a forward" begin
-    tb = Diffusers.TransformerBlock(; dim=320, n_heads=8, head_dim=40, context_dim=768)
-    Diffusers.load_state!(tb, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1])
+# @testset "Load SD BasicTransformerBlock & do a forward" begin
+#     tb = Diffusers.TransformerBlock(; dim=320, n_heads=8, head_dim=40, context_dim=768)
+#     Diffusers.load_state!(tb, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1])
 
-    # pipe.unet.down_blocks[0].attentions[0].transformer_blocks[0](torch.ones(1, 4096, 320), torch.ones(1, 77, 768))[0, 0, :5]
-    target_y = [1.1293957, 0.39926898, 2.0685763, 0.07038331, 3.2459378]
-    x = ones(Float32, 320, 4096, 1)
-    context = ones(Float32, 768, 77, 1)
-    y = tb(x, context)
-    @test y[1:5, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+#     # pipe.unet.down_blocks[0].attentions[0].transformer_blocks[0](torch.ones(1, 4096, 320), torch.ones(1, 77, 768))[0, 0, :5]
+#     target_y = [1.1293957, 0.39926898, 2.0685763, 0.07038331, 3.2459378]
+#     x = ones(Float32, 320, 4096, 1)
+#     context = ones(Float32, 768, 77, 1)
+#     y = tb(x, context)
+#     @test y[1:5, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+# end
+
+@testset "Load SD Transformer2DModel & do a forward"  begin
+    tm = Transformer2DModel(;
+        num_attention_heads=8, attention_head_dim=40, in_channels=320, cross_attention_dim=768,)
+    Diffusers.load_state!(tm, STATE_DICT.down_blocks[1].attentions[1])
+
+    # pipe.unet.down_blocks[0].attentions[0](torch.ones(1, 320, 64, 64), torch.ones(1, 77, 768)).sample[0, 0, :5]
+    target_y = [1.7389021, 0.795506, 1.6157904, 1.6191279, 0.6467081]
+    y = tm(ones(64, 64, 320, 1); encoder_hidden_states=ones(768, 77, 1))
+    @test y.sample[1, 1, 1:5, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
