@@ -28,8 +28,6 @@ function load_state!(chain::Flux.Chain, state)
     end
 end
 
-load_state!(::Flux.Dropout, _) = return
-
 function load_state!(layer::Flux.LayerNorm, state)
     for k in keys(state)
         key = getfield(layer.diag, k == :weight ? :scale : k)
@@ -49,3 +47,22 @@ function load_state!(attn::CrossAttention, state)
         load_state!(getfield(attn, k), getfield(state, k))
     end
 end
+
+function load_state!(fwd::FeedForward, state)
+    load_state!(fwd.fn[1], state.net[1].proj)
+    load_state!(fwd.fn[4], state.net[3])
+end
+
+function load_state!(block::TransformerBlock, state)
+    load_state!(block.attention_1, state.attn1)
+    (:attn2) in keys(state) && load_state!(block.attention_2, state.attn2)
+
+    load_state!(block.fwd, state.ff)
+    load_state!(block.norm_1, state.norm1)
+    load_state!(block.norm_2, state.norm2)
+    load_state!(block.norm_3, state.norm3)
+end
+
+load_state!(::Flux.Dropout, _) = return
+
+load_state!(::Nothing, _) = return

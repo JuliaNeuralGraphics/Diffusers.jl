@@ -2,7 +2,7 @@ using Test
 using Diffusers
 using Flux
 
-const STATE_DICT, CFG = load_pretrained_model(
+const STATE_DICT, CFG = Diffusers.load_pretrained_model(
     "runwayml/stable-diffusion-v1-5",
     "unet/config.json",
     "unet/diffusion_pytorch_model.bin")
@@ -16,12 +16,6 @@ const STATE_DICT, CFG = load_pretrained_model(
         include("model_load_utils.jl")
     end
 
-    # @testset "models.GEGLU" begin
-    #     include("models/test_geglu.jl")
-    # end
-    # @testset "models.FeedForward" begin
-    #     include("models/test_feedforward.jl")
-    # end
     # @testset "models.BasicTransformerBlock" begin
     #     include("models/test_basic_transformer_block.jl")
     # end

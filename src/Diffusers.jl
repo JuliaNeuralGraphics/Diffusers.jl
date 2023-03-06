@@ -1,16 +1,17 @@
 module Diffusers
 
-using Flux
+import MLUtils
 import Transformers
 
-export load_pretrained_model, models
+using Flux
 
 const Maybe{T} = Union{Nothing, T}
 
+include("feed_forward.jl")
 include("attention.jl")
+include("transformer.jl")
 
 include("utils.jl")
 include("load_utils.jl")
-# include("models/models.jl")
 
 end

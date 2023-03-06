@@ -42,7 +42,7 @@ function CrossAttention(;
 end
 
 function (attn::CrossAttention)(
-    x::T, context::C; mask::Maybe{M} = nothing,
+    x::T, context::Maybe{C} = nothing; mask::Maybe{M} = nothing,
 ) where {
     T <: AbstractArray{Float32, 3},
     C <: AbstractArray{Float32, 3},
@@ -50,11 +50,12 @@ function (attn::CrossAttention)(
 }
     _, seq_length, batch = size(x)
 
-    context = attn.norm_cross(context)
+    c = isnothing(context) ? x : context
+    c = attn.norm_cross(c)
 
     q = attn.to_q(x)
-    k = attn.to_k(context)
-    v = attn.to_v(context)
+    k = attn.to_k(c)
+    v = attn.to_v(c)
 
     mask = isnothing(mask) ? nothing :
         reshape(mask, size(mask, 1), 1, 1, size(mask, 2))
