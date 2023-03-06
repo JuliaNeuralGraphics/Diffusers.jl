@@ -1,13 +1,16 @@
 module Diffusers
-using Transformers
-using NNlib
 
-export 
-    load_pretrained_model,
-    torch,
-    models
+using Flux
+import Transformers
+
+export load_pretrained_model, models
+
+const Maybe{T} = Union{Nothing, T}
+
+include("attention.jl")
 
 include("utils.jl")
-include("torch/torch.jl")
-include("models/models.jl")
+include("load_utils.jl")
+# include("models/models.jl")
+
 end
