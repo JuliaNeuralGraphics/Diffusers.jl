@@ -16,7 +16,8 @@ module models
     FeedForward,
     BasicTransformerBlock,
     Transformer2DModel,
-    ResnetBlock2D
+    ResnetBlock2D,
+    CrossAttnDownBlock2D
 
     # All models in `models` module must call models.load_state!
     # Order: models.load_state! -> torch.load_state! -> Transformers.load_state!
@@ -39,4 +40,5 @@ module models
     include("attention.jl")
     include("transformer_2d.jl")
     include("resnet.jl")
+    include("unet_2d_blocks.jl")
 end

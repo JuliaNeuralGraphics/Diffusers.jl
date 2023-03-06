@@ -161,10 +161,8 @@ function (tb::BasicTransformerBlock)(hidden_states;
     cross_attention_kwargs=nothing,
     class_labels=nothing,
 )
-    # TODO: add AdaLayerNorm
     norm_hidden_states = tb.norm1(hidden_states)
     cross_attention_kwargs = cross_attention_kwargs !== nothing ? cross_attention_kwargs : Dict()
-    # attn1_encoder_hidden_states = 
 
     # 1. Self-Attention
     attn_output = tb.attn1(norm_hidden_states;

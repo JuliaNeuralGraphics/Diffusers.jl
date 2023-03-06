@@ -46,20 +46,20 @@ end
 
 function load_state!(layer::Conv2d, state)
     for k in keys(state)
-    if k == :weight
-        key = getfield(layer, k)  # name
-        val = getfield(state, k)  # tensor
-        # (out_channels, in_channels​, kernel_size[0], kernel_size[1]) -> 
-        # (kernel_size[1], kernel_size[0], in_channels​, out_channels)
-        val = permutedims(val, (4, 3, 2, 1)) # BCHW -> WHCB
-    elseif k == :bias
-        key = getfield(layer, k)  # name
-        val = getfield(state, k)  # expects a single dim tensor
-        val = reshape(val, (1, 1, size(val)[1], 1)) # bias added to out_channels
-    else
-        key = getfield(layer, nk) # name
-        val = getfield(state, k)  # tensor
-    end
-    load_state!(key, val)
+        if k == :weight
+            key = getfield(layer, k)  # name
+            val = getfield(state, k)  # tensor
+            # (out_channels, in_channels​, kernel_size[0], kernel_size[1]) -> 
+            # (kernel_size[1], kernel_size[0], in_channels​, out_channels)
+            val = permutedims(val, (4, 3, 2, 1)) # BCHW -> WHCB
+        elseif k == :bias
+            key = getfield(layer, k)  # name
+            val = getfield(state, k)  # expects a single dim tensor
+            val = reshape(val, (1, 1, size(val)[1], 1)) # bias added to out_channels
+        else
+            key = getfield(layer, k) # name
+            val = getfield(state, k)  # tensor
+        end
+        load_state!(key, val)
     end
 end

@@ -7,6 +7,7 @@ using Flux
 using Diffusers.torch
 using Diffusers.models
 
+
 @testset "Diffusers.jl" begin
     @testset "torch.Conv2d" begin
         include("torch/test_conv.jl")
@@ -26,6 +27,9 @@ using Diffusers.models
     @testset "models.CrossAttention" begin
         include("models/test_cross_attention.jl")
     end
+    @testset "models.CrossAttnDownBlock2D" begin
+        include("models/test_cross_atten_downblock2d.jl")
+    end    
     @testset "models.GEGLU" begin
         include("models/test_geglu.jl")
     end
