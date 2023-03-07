@@ -14,11 +14,4 @@ const STATE_DICT, CFG = Diffusers.load_pretrained_model(
     @testset "Model load utils" begin
         include("model_load_utils.jl")
     end
-
-    # @testset "models.ResnetBlock2D" begin
-    #     include("models/test_resnet.jl")
-    # end
-    # @testset "utils.jl" begin
-    #     include("test_utils.jl")
-    # end
 end

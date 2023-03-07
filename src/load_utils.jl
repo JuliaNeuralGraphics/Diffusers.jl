@@ -69,6 +69,19 @@ function load_state!(tr::Transformer2D, state)
     end
 end
 
+function load_state!(block::ResnetBlock2D, state)
+    load_state!(block.init_proj[1], state.norm1)
+    load_state!(block.init_proj[2], state.conv1)
+    load_state!(block.out_proj[3], state.conv2)
+    load_state!(block.norm, state.norm2)
+
+    :time_emb_proj in keys(state) && load_state!(
+        block.time_emb_proj[2], state.time_emb_proj)
+
+    (block.conv_shortcut ≡ identity) || load_state!(
+        block.conv_shortcut, state.conv_shortcut)
+end
+
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return

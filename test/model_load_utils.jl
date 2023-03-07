@@ -44,3 +44,15 @@ end
     y = tm(x, context)
     @test y[1, 1, 1:5, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
+
+@testset "Load SD FeedForward" begin
+    rs = Diffusers.ResnetBlock2D(; in_channels=320, time_emb_channels=1280)
+    Diffusers.load_state!(rs, STATE_DICT.down_blocks[1].resnets[1])
+
+    x, time_embedding = ones(Float32, 64, 64, 320, 1), ones(Float32, 1280, 1)
+
+    # pipe.unet.down_blocks[0].resnets[0](torch.ones(1, 320, 64, 64), torch.ones(1, 1280)).detach().numpy()[0, :5, 0, 0]
+    target_y = [1.0409687, 0.36245018, 0.92556036, 0.95282567, 1.5846546]
+    y = rs(x, time_embedding)
+    @test y[1, 1, 1:5, 1] ≈ target_y atol=1e-3 rtol=1e-3
+end
