@@ -63,6 +63,12 @@ function load_state!(block::TransformerBlock, state)
     load_state!(block.norm_3, state.norm3)
 end
 
+function load_state!(tr::Transformer2D, state)
+    for k in keys(state)
+        load_state!(getfield(tr, k), getfield(state, k))
+    end
+end
+
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return

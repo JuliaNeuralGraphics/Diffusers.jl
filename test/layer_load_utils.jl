@@ -22,7 +22,6 @@ end
 end
 
 @testset "Load a SD linear layer & do forward without bias" begin
-    state_dict, cfg = load_pretrained_model("runwayml/stable-diffusion-v1-5", "unet/config.json", "unet/diffusion_pytorch_model.bin")
     m = Dense(320 => 320; bias=false)
     Diffusers.load_state!(m, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1].attn1.to_q)
 

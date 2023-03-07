@@ -53,19 +53,75 @@ function (block::TransformerBlock)(
     block.fwd(block.norm_3(x)) .+ x
 end
 
-# TODO
-# - UNet2DCondition: https://github.com/huggingface/diffusers/blob/c7da8fd23359a22d0df2741688b5b4f33c26df21/src/diffusers/models/unet_2d_condition.py#L249
-# - get_down_block: https://github.com/huggingface/diffusers/blob/c7da8fd23359a22d0df2741688b5b4f33c26df21/src/diffusers/models/unet_2d_blocks.py#LL89C29-L89C29
-# - cross attention down block: https://github.com/huggingface/diffusers/blob/c7da8fd23359a22d0df2741688b5b4f33c26df21/src/diffusers/models/unet_2d_blocks.py#L770
+struct Transformer2D{N, P, B}
+    norm::N
+    proj_in::P
+    proj_out::P
+    transformer_blocks::B
 
-# TODO https://github.com/huggingface/diffusers/blob/c7da8fd23359a22d0df2741688b5b4f33c26df21/src/diffusers/models/transformer_2d.py#L80
-struct Transformer2D
-
+    use_linear_projection::Bool
 end
 Flux.@functor Transformer2D
 
-function Transformer2D(;
-    
-)
+# NOTE only continuous input supported
 
+function Transformer2D(;
+    in_channels::Int, n_heads::Int = 16, head_dim::Int = 88,
+    n_layers::Int = 1, n_norm_groups::Int = 32,
+    use_linear_projection::Bool = false,
+    dropout::Real = 0, context_dim::Maybe{Int} = nothing,
+)
+    inner_dim = n_heads * head_dim
+
+    norm = GroupNorm(in_channels, n_norm_groups)
+    proj_in = use_linear_projection ?
+        Dense(in_channels => inner_dim) :
+        Conv((1, 1), in_channels => inner_dim)
+    proj_out = use_linear_projection ?
+        Dense(inner_dim => in_channels) :
+        Conv((1, 1), inner_dim => in_channels)
+
+    transformer_blocks = Chain([TransformerBlock(;
+        dim=inner_dim, n_heads, head_dim, context_dim, dropout)
+        for _ in 1:n_layers]...)
+
+    Transformer2D(
+        norm, proj_in, proj_out, transformer_blocks,
+        use_linear_projection)
+end
+
+function (tr::Transformer2D)(x::T, context::Maybe{C} = nothing) where {
+    T <: AbstractArray{Float32, 4},
+    C <: AbstractArray{Float32, 3},
+}
+    width, height, channels, batch = size(x)
+    residual = x
+
+    x = tr.norm(x)
+
+    if tr.use_linear_projection
+        x = reshape(x, :, channels, batch)
+        x = permutedims(x, (2, 1, 3))
+        x = tr.proj_in(x)
+    else
+        x = tr.proj_in(x)
+        x = reshape(x, :, size(x, 3), batch)
+        x = permutedims(x, (2, 1, 3))
+    end
+
+    for block in tr.transformer_blocks
+        x = block(x, context)
+    end
+
+    if tr.use_linear_projection
+        x = tr.proj_out(x)
+        x = permutedims(x, (2, 1, 3))
+        x = reshape(x, width, height, :, batch)
+    else
+        x = permutedims(x, (2, 1, 3))
+        x = reshape(x, width, height, :, batch)
+        x = tr.proj_out(x)
+    end
+
+    x .+ residual
 end
