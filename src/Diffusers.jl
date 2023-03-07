@@ -12,7 +12,6 @@ include("attention.jl")
 include("transformer.jl")
 include("resnet.jl")
 
-include("utils.jl")
 include("load_utils.jl")
 
 # TODO
