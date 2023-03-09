@@ -56,3 +56,15 @@ end
     y = rs(x, time_embedding)
     @test y[1, 1, 1:5, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
+
+@testset "Load SD FeedForward" begin
+    cattn = Diffusers.CrossAttnDownBlock2D(; in_channels=320, out_channels=320, 
+    time_emb_channels=1280, n_layers=2, attn_n_heads=8, context_dim=768)
+    Diffusers.load_state!(cattn, STATE_DICT.down_blocks[1])
+
+    # pipe.unet.down_blocks[0](torch.ones(1, 320, 64, 64), torch.ones(1, 1280), torch.ones(1, 77, 768))
+    x, temb, context = ones(Float32, 64, 64, 320, 1), ones(Float32, 1280, 1), ones(Float32, 768, 77, 1)
+    target_y = [3.5323777, 4.8788514, 4.8925233, 4.8956304, 4.8956304, 4.8956304]
+    y = cattn(x, temb, context)
+    @test y[1:6, 1, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+end
