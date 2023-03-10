@@ -3,9 +3,11 @@ Base.@kwdef mutable struct PNDMScheduler{
     T <: AbstractVector{Int},
     S <: AbstractArray{Float32},
 }
-    α::A
-    α̅::A
-    β::A
+    α̂::A # Same as α̅ but lives on the current device.
+
+    α::Vector{Float32}
+    α̅::Vector{Float32}
+    β::Vector{Float32}
 
     α_final::Float32
     σ₀::Float32 = 1f0 # Standard deviation of the initial noise distribution.
@@ -30,7 +32,24 @@ Base.@kwdef mutable struct PNDMScheduler{
 end
 Flux.@functor PNDMScheduler
 
-# TODO add adapter
+# TODO subtype any Flux adaptor?
+function Adapt.adapt_storage(to::Flux.FluxCUDAAdaptor, pndm::PNDMScheduler)
+    PNDMScheduler(
+        Adapt.adapt(to, pndm.α̂),
+        pndm.α, pndm.α̅, pndm.β,
+        pndm.α_final, pndm.σ₀, pndm.skip_prk_steps,
+        Adapt.adapt(to, pndm.timesteps),
+        pndm.prk_timesteps, pndm.plms_timesteps, pndm._timesteps,
+
+        Adapt.adapt(to, pndm.x_current),
+        Adapt.adapt(to, pndm.sample),
+        [Adapt.adapt(to, x) for x in pndm.xs],
+
+        pndm.n_train_steps, pndm.n_inference_steps, pndm.counter)
+end
+
+# TODO use Flux.GPUAdaptor once Flux bumps the release.
+Flux.gpu(pndm::PNDMScheduler) = Adapt.adapt_storage(Flux.FluxCUDAAdaptor(), pndm)
 
 Base.ndims(::PNDMScheduler{A, T, S}) where {A, T, S} = ndims(S)
 
@@ -40,7 +59,7 @@ function PNDMScheduler(nd::Int;
     α_to_one::Bool = false,
     skip_prk_steps::Bool = false,
 )
-    β_step = (β_range[2] - β_range[1]) / n_train_steps
+    β_step = (β_range[2] - β_range[1]) / (n_train_steps - 1)
     β = collect(β_range[1]:β_step:β_range[2])
 
     α = 1f0 .- β
@@ -53,7 +72,7 @@ function PNDMScheduler(nd::Int;
     sample = Array{Float32, nd}(undef, ntuple(_ -> 0, Val{nd}()))
 
     PNDMScheduler(;
-        α, α̅, β, α_final, skip_prk_steps,
+        α̂=α̅, α, α̅, β, α_final, skip_prk_steps,
         _timesteps,
         x_current, sample, xs=Array{Float32, nd}[],
         n_train_steps)
@@ -91,12 +110,13 @@ function set_timesteps!(pndm::PNDMScheduler, n_inference_steps::Int)
             repeat(prk_timesteps[1:end - 1]; inner=2)[2:end - 1])
 
         pndm.prk_timesteps = prk_timesteps
-        pndm.plms_timesteps = pndm._timesteps[1:end - 3]
+        pndm.plms_timesteps = reverse(pndm._timesteps[1:end - 3])
     end
 
     copy!(pndm.timesteps, cat(pndm.prk_timesteps, pndm.plms_timesteps; dims=1))
 
     # Reset counters.
+    pndm.x_current = similar(pndm.x_current, ntuple(_ -> 1, Val(ndims(pndm))))
     fill!(pndm.x_current, 0f0)
     empty!(pndm.xs)
     pndm.counter = 0
@@ -112,12 +132,12 @@ Predict the sample at the previous `t - 1` timestep by reversing the SDE.
 - `t::Int`: Current discrete timestep in the diffusion chain.
 - `sample`: Sample at the current timestep `t` created by diffusion process.
 """
-function step(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
+function step!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
     A, T, S,
 }
-    pndm.counter < length(pndm.prk_timesteps) && !pndm.skip_prk_steps ?
-        step_prk(pndm, x; t, sample) :
-        step_plms(pndm, x; t, sample)
+    (pndm.counter < length(pndm.prk_timesteps) && !pndm.skip_prk_steps) ?
+        step_prk!(pndm, x; t, sample) :
+        step_plms!(pndm, x; t, sample)
 end
 
 """
@@ -125,7 +145,7 @@ Step function propagating the sample with the Runge-Kutta method.
 RK takes 4 forward passes to approximate the solution
 to the differential equation.
 """
-function step_prk(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
+function step_prk!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
     A, T, S,
 }
     ratio = pndm.n_train_steps ÷ pndm.n_inference_steps
@@ -147,15 +167,14 @@ function step_prk(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
     end
 
     pndm.counter += 1
-    sample = isnothing(pndm.sample) ? sample : pndm.sample
-    previous_sample(pndm, x; t, prev_t, sample)
+    previous_sample(pndm, x; t, prev_t, sample=pndm.sample)
 end
 
 """
 Step function propagating the sample with the linear multi-step method.
 Has one forward pass with multiple times to approximate the solution.
 """
-function step_plms(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
+function step_plms!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
     A, T, S,
 }
     !pndm.skip_prk_steps && length(pndm.xs) < 3 && error("""
@@ -195,8 +214,20 @@ function step_plms(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where 
     previous_sample(pndm, x; t, prev_t, sample)
 end
 
-# TODO add_noise:
-# https://github.com/huggingface/diffusers/blob/c7da8fd23359a22d0df2741688b5b4f33c26df21/src/diffusers/schedulers/scheduling_pndm.py#L401
+"""
+# Arguments:
+
+- `x`: Sample for which to apply noise.
+- `ξ`: Noise which to apply to `x`.
+- `timesteps`: Vector of discrete timesteps starting at `0`.
+"""
+function add_noise(pndm::PNDMScheduler{A, T, S}, x::S, ξ::S, timesteps::T) where {
+    A, T, S,
+}
+    αᵗ = reshape(pndm.α̂[timesteps .+ 1], ntuple(_->1, Val(ndims(S) - 1))..., :)
+    α̅, β̅ = sqrt.(αᵗ), sqrt.(1f0 .- αᵗ)
+    α̅ .* x .+ β̅ .* ξ
+end
 
 # Equation (9) from paper.
 function previous_sample(
