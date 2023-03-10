@@ -2,8 +2,10 @@ using Test
 using Diffusers
 using Flux
 
-const STATE_DICT, CFG = Diffusers.load_pretrained_model(
-    "runwayml/stable-diffusion-v1-5")
+const STATE, CONFIG = Diffusers.load_pretrained_model(
+    "runwayml/stable-diffusion-v1-5";
+    state_file="unet/diffusion_pytorch_model.bin",
+    config_file="unet/config.json")
 
 @testset "Diffusers.jl" begin
     @testset "Layer load utils" begin

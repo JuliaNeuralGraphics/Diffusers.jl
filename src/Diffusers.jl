@@ -1,10 +1,12 @@
 module Diffusers
 
-import Transformers
 import MLUtils
+import JSON3
+import Pickle
 
 using Adapt
 using Flux
+using HuggingFaceApi
 
 const Maybe{T} = Union{Nothing, T}
 

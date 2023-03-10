@@ -7,24 +7,64 @@ For example:
 julia> state_dict, cfg = load_pretrained_model("runwayml/stable-diffusion-v1-5", "unet/config.json", "unet/diffusion_pytorch_model.bin")
 ```
 """
-function load_pretrained_model(model_name::String)
-    state = Transformers.HuggingFace.load_state_dict(model_name)
-    config = Transformers.HuggingFace.load_config_dict(model_name)
-    state, config
+function load_pretrained_model(
+    model_name::String; state_file::String, config_file::String,
+)
+    state_url = HuggingFaceURL(model_name, state_file)
+    config_url = HuggingFaceURL(model_name, config_file)
+    state = Pickle.Torch.THload(_hgf_download(state_url))
+    config = JSON3.read(read(_hgf_download(config_url)))
+    state_dict_to_namedtuple(state), config
+end
+
+function _hgf_download(
+    url::HuggingFaceURL; cache::Bool = true,
+    auth_token = HuggingFaceApi.get_token(),
+)
+    hf_hub_download(
+        url.repo_id, url.filename; repo_type=url.repo_type,
+        revision=url.revision, auth_token, cache)
+end
+
+function state_dict_to_namedtuple(state_dict)
+    ht = Pickle.HierarchicalTable()
+    foreach(((k, v),) -> setindex!(ht, v, k), pairs(state_dict))
+    _ht2nt(ht)
+end
+
+_ht2nt(x::Some) = something(x)
+_ht2nt(x::Pickle.HierarchicalTable) = _ht2nt(x.head)
+function _ht2nt(x::Pickle.TableBlock)
+    if iszero(length(x.entry))
+        return ()
+    else
+        tks = Tuple(keys(x.entry))
+        if all(Base.Fix1(all, isdigit), tks)
+            n_indices = maximum(parse.(Int, tks)) + 1
+            inds = Vector(undef, n_indices)
+            foreach(tks) do is
+                i = parse(Int, is) + 1
+                inds[i] = _ht2nt(x.entry[is])
+            end
+            return inds
+        else
+            cs = map(_ht2nt, values(x.entry))
+            ns = map(Symbol, tks)
+            return NamedTuple{ns}(cs)
+        end
+    end
 end
 
 # TODO verify keys before loop and fail early
 
 function load_state!(layer::Flux.Conv, state)
     for k in keys(state)
-        val = if k == :weight
+        v = getfield(state, k)
+        if k == :weight
             # BCHW -> WHCB & flip kernel from cross-correlation to convolution.
-            w = permutedims(getfield(state, k), (4, 3, 2, 1))
-            w = w[end:-1:1, end:-1:1, :, :]
-        else
-            getfield(state, k)
+            v = permutedims(v, (4, 3, 2, 1))[end:-1:1, end:-1:1, :, :]
         end
-        getfield(layer, k) .= val
+        getfield(layer, k) .= v
     end
 end
 
@@ -35,11 +75,9 @@ function load_state!(layer::Flux.Dense, state)
 end
 
 function load_state!(chain::Flux.Chain, state)
-    layer_id = 1
-    for layer in chain
+    for (i, layer) in enumerate(chain)
         (layer isa Dropout || layer ≡ identity) && continue
-        load_state!(layer, state[layer_id])
-        layer_id += 1
+        load_state!(layer, state[i])
     end
 end
 
