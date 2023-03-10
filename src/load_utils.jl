@@ -7,10 +7,10 @@ For example:
 julia> state_dict, cfg = load_pretrained_model("runwayml/stable-diffusion-v1-5", "unet/config.json", "unet/diffusion_pytorch_model.bin")
 ```
 """
-function load_pretrained_model(model_name::String, config::String, bin_file::String)
-    cfg = Transformers.load_config_dict(model_name, config)
-    state_dict = Transformers.load_state(model_name, bin_file)
-    return state_dict, cfg
+function load_pretrained_model(model_name::String)
+    state = Transformers.HuggingFace.load_state_dict(model_name)
+    config = Transformers.HuggingFace.load_config_dict(model_name)
+    state, config
 end
 
 # TODO verify keys before loop and fail early
