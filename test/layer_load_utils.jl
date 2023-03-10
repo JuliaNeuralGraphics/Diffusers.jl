@@ -1,6 +1,6 @@
 @testset "Load SD unet.conv_in & do forward" begin
     conv = Conv((3, 3), 4 => 320; pad=1)
-    Diffusers.load_state!(conv, STATE_DICT.conv_in)
+    Diffusers.load_state!(conv, STATE.conv_in)
 
     x = ones(Float32, 64, 64, 4, 1)
     y = conv(x)
@@ -13,7 +13,7 @@ end
 
 @testset "Load a SD linear layer & do forward with bias" begin
     m = Dense(320 => 320)
-    Diffusers.load_state!(m, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1].attn1.to_out[1])
+    Diffusers.load_state!(m, STATE.down_blocks[1].attentions[1].transformer_blocks[1].attn1.to_out[1])
 
     # Harish: manually obtained, pytorch row wise approx equals jl col wise
     target_y = [2.4588253, 0.31246912, -2.4237952, 1.1872879, -0.99491394, 0.19098154]
@@ -23,7 +23,7 @@ end
 
 @testset "Load a SD linear layer & do forward without bias" begin
     m = Dense(320 => 320; bias=false)
-    Diffusers.load_state!(m, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1].attn1.to_q)
+    Diffusers.load_state!(m, STATE.down_blocks[1].attentions[1].transformer_blocks[1].attn1.to_q)
 
     # Harish: manually obtained, pytorch row wise approx equals jl col wise
     target_y = [-0.0330424, 0.30586573, -0.3346526, 0.6630356, -0.39755583, 0.4008978]
@@ -34,13 +34,13 @@ end
 @testset "Load a SD ModuleList" begin
     m = Chain(Dense(320 => 320), Dropout(0.1))
     # there are no states associated with dropout, so its not present in state_dict
-    Diffusers.load_state!(m, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1].attn1.to_out)
+    Diffusers.load_state!(m, STATE.down_blocks[1].attentions[1].transformer_blocks[1].attn1.to_out)
     @test length(m) == 2
 end
 
 @testset "Load a SD layernorm & do forward with bias" begin
     ln = LayerNorm(320)
-    Diffusers.load_state!(ln, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1].norm1)
+    Diffusers.load_state!(ln, STATE.down_blocks[1].attentions[1].transformer_blocks[1].norm1)
 
     # Harish: manually obtained, pytorch row wise approx equals jl col wise
     target_y = [0.03145087, -0.11135, 0.00409993, 0.16613194, -0.04407737]
@@ -50,7 +50,7 @@ end
 
 @testset "Load a SD groupnorm with Flux & do forward" begin
     g = GroupNorm(320, 32)
-    Diffusers.load_state!(g, STATE_DICT.down_blocks[1].attentions[1].norm)
+    Diffusers.load_state!(g, STATE.down_blocks[1].attentions[1].norm)
 
     # Harish: manually obtained, pytorch row wise approx equals jl col wise
     target_y = [-0.06698608, 0.17626953, -0.22659302, 0.03451538, -0.01315308]

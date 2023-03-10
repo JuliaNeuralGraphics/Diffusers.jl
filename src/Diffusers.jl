@@ -1,9 +1,12 @@
 module Diffusers
 
 import MLUtils
-import Transformers
+import JSON3
+import Pickle
 
+using Adapt
 using Flux
+using HuggingFaceApi
 
 const Maybe{T} = Union{Nothing, T}
 
@@ -12,6 +15,9 @@ include("attention.jl")
 include("transformer.jl")
 include("resnet.jl")
 include("unet_2d.jl")
+
+include("schedulers/pndm.jl")
+
 include("load_utils.jl")
 
 # TODO

@@ -1,6 +1,6 @@
 @testset "Load SD cross_attention & do a forward" begin
     attn = Diffusers.CrossAttention(; dim=320, head_dim=40)
-    Diffusers.load_state!(attn, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1].attn1)
+    Diffusers.load_state!(attn, STATE.down_blocks[1].attentions[1].transformer_blocks[1].attn1)
 
     # Manually obtained, pytorch row wise approx equals jl col wise
     # In python, pipe.unet.down_blocks[0].attentions[0].transformer_blocks[0].attn1(torch.ones(2, 4096, 320))[0, 0, :5]
@@ -13,7 +13,7 @@ end
 
 @testset "Load SD FeedForward" begin
     fwd = Diffusers.FeedForward(; dim=320)
-    Diffusers.load_state!(fwd, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1].ff)
+    Diffusers.load_state!(fwd, STATE.down_blocks[1].attentions[1].transformer_blocks[1].ff)
 
     # pipe.unet.down_blocks[0].attentions[0].transformer_blocks[0].ff(torch.ones(1, 2, 320))[0, 0, :5].detach().numpy()
     target_y = [0.5421921, -0.00488963, 0.18569, -0.17563964, -0.0561044]
@@ -23,7 +23,7 @@ end
 
 @testset "Load SD BasicTransformerBlock & do a forward" begin
     tb = Diffusers.TransformerBlock(; dim=320, n_heads=8, head_dim=40, context_dim=768)
-    Diffusers.load_state!(tb, STATE_DICT.down_blocks[1].attentions[1].transformer_blocks[1])
+    Diffusers.load_state!(tb, STATE.down_blocks[1].attentions[1].transformer_blocks[1])
 
     # pipe.unet.down_blocks[0].attentions[0].transformer_blocks[0](torch.ones(1, 4096, 320), torch.ones(1, 77, 768))[0, 0, :5]
     target_y = [1.1293957, 0.39926898, 2.0685763, 0.07038331, 3.2459378]
@@ -36,7 +36,7 @@ end
 @testset "Load SD Transformer2DModel & do a forward"  begin
     tm = Diffusers.Transformer2D(;
         in_channels=320, context_dim=768, n_heads=8, head_dim=40)
-    Diffusers.load_state!(tm, STATE_DICT.down_blocks[1].attentions[1])
+    Diffusers.load_state!(tm, STATE.down_blocks[1].attentions[1])
 
     # pipe.unet.down_blocks[0].attentions[0](torch.ones(1, 320, 64, 64), torch.ones(1, 77, 768)).sample[0, 0, :5]
     target_y = [1.7389021, 0.795506, 1.6157904, 1.6191279, 0.6467081]
@@ -47,7 +47,7 @@ end
 
 @testset "Load SD FeedForward" begin
     rs = Diffusers.ResnetBlock2D(; in_channels=320, time_emb_channels=1280)
-    Diffusers.load_state!(rs, STATE_DICT.down_blocks[1].resnets[1])
+    Diffusers.load_state!(rs, STATE.down_blocks[1].resnets[1])
 
     x, time_embedding = ones(Float32, 64, 64, 320, 1), ones(Float32, 1280, 1)
 
@@ -60,7 +60,7 @@ end
 @testset "Load SD FeedForward" begin
     cattn = Diffusers.CrossAttnDownBlock2D(; in_channels=320, out_channels=320, 
     time_emb_channels=1280, n_layers=2, attn_n_heads=8, context_dim=768)
-    Diffusers.load_state!(cattn, STATE_DICT.down_blocks[1])
+    Diffusers.load_state!(cattn, STATE.down_blocks[1])
 
     # pipe.unet.down_blocks[0](torch.ones(1, 320, 64, 64), torch.ones(1, 1280), torch.ones(1, 77, 768))
     x, temb, context = ones(Float32, 64, 64, 320, 1), ones(Float32, 1280, 1), ones(Float32, 768, 77, 1)

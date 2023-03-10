@@ -4,12 +4,13 @@ authors = ["Harish Anand"]
 version = "0.1.0"
 
 [deps]
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
-Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+HuggingFaceApi = "3cc741c3-0c9d-4fbe-84fa-cdec264173de"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
+Pickle = "fbb45041-c46e-462f-888f-7c521cafbc2c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
-Transformers = "21ca0261-441d-5938-ace7-c90938fde4d4"
 
 [compat]
 julia = "1"
