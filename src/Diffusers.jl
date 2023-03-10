@@ -12,6 +12,7 @@ include("feed_forward.jl")
 include("attention.jl")
 include("transformer.jl")
 include("resnet.jl")
+include("unet_2d.jl")
 
 include("schedulers/pndm.jl")
 

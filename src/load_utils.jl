@@ -97,6 +97,16 @@ function load_state!(block::ResnetBlock2D, state)
         block.conv_shortcut, state.conv_shortcut)
 end
 
+function load_state!(tr::CrossAttnDownBlock2D, state)
+    for k in keys(state)
+        if k == :downsamplers
+            load_state!(getfield(tr, k)[1], getfield(state, k)[1].conv) # inside .conv
+        else
+            load_state!(getfield(tr, k), getfield(state, k)) 
+        end
+    end
+end
+
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return
