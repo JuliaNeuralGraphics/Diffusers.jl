@@ -1,4 +1,5 @@
 module Diffusers
+export HGF
 
 import MLUtils
 import JSON3
@@ -9,6 +10,13 @@ using Flux
 using HuggingFaceApi
 
 const Maybe{T} = Union{Nothing, T}
+
+const HGF = Val{:HGF}()
+
+const FluxDeviceAdaptors = (
+    Flux.FluxCPUAdaptor,
+    Flux.FluxCUDAAdaptor,
+    Flux.FluxAMDAdaptor)
 
 include("feed_forward.jl")
 include("attention.jl")

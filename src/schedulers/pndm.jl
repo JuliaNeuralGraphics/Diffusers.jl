@@ -3,15 +3,15 @@ Base.@kwdef mutable struct PNDMScheduler{
     T <: AbstractVector{Int},
     S <: AbstractArray{Float32},
 }
-    α̂::A # Same as α̅ but lives on the current device.
+    const α̂::A # Same as α̅ but lives on the current device.
+    const α::Vector{Float32}
+    const α̅::Vector{Float32}
+    const β::Vector{Float32}
 
-    α::Vector{Float32}
-    α̅::Vector{Float32}
-    β::Vector{Float32}
-
-    α_final::Float32
-    σ₀::Float32 = 1f0 # Standard deviation of the initial noise distribution.
-    skip_prk_steps::Bool
+    const α_final::Float32
+    const σ₀::Float32 = 1f0 # Standard deviation of the initial noise distribution.
+    const skip_prk_steps::Bool
+    const step_offset::Int
 
     # Adjustable.
 
@@ -26,74 +26,84 @@ Base.@kwdef mutable struct PNDMScheduler{
     sample::S
     xs::Vector{S}
 
-    n_train_steps::Int
-    n_inference_steps::Int = -1
+    n_train_timesteps::Int
+    n_inference_timesteps::Int = -1
     counter::Int = 0
 end
-Flux.@functor PNDMScheduler
-
-# TODO subtype any Flux adaptor?
-function Adapt.adapt_storage(to::Flux.FluxCUDAAdaptor, pndm::PNDMScheduler)
-    PNDMScheduler(
-        Adapt.adapt(to, pndm.α̂),
-        pndm.α, pndm.α̅, pndm.β,
-        pndm.α_final, pndm.σ₀, pndm.skip_prk_steps,
-        Adapt.adapt(to, pndm.timesteps),
-        pndm.prk_timesteps, pndm.plms_timesteps, pndm._timesteps,
-
-        Adapt.adapt(to, pndm.x_current),
-        Adapt.adapt(to, pndm.sample),
-        [Adapt.adapt(to, x) for x in pndm.xs],
-
-        pndm.n_train_steps, pndm.n_inference_steps, pndm.counter)
-end
-
-# TODO use Flux.GPUAdaptor once Flux bumps the release.
-Flux.gpu(pndm::PNDMScheduler) = Adapt.adapt_storage(Flux.FluxCUDAAdaptor(), pndm)
-
-Base.ndims(::PNDMScheduler{A, T, S}) where {A, T, S} = ndims(S)
 
 function PNDMScheduler(nd::Int;
+    β_schedule::Symbol = :linear,
     β_range::Pair{Float32, Float32} = 1f-4 => 2f-2,
-    n_train_steps::Int = 1000,
+    n_train_timesteps::Int = 1000,
     α_to_one::Bool = false,
     skip_prk_steps::Bool = false,
+    step_offset::Int = 0,
 )
-    β_step = (β_range[2] - β_range[1]) / (n_train_steps - 1)
-    β = collect(β_range[1]:β_step:β_range[2])
+    β = if β_schedule == :linear
+        β_step = (β_range[2] - β_range[1]) / (n_train_timesteps - 1)
+        collect(β_range[1]:β_step:β_range[2])
+    elseif β_schedule == :scaled_linear
+        β_start, β_end = √β_range[1], √β_range[2]
+        β_step = (β_end - β_start) / (n_train_timesteps - 1)
+        collect(β_start:β_step:β_end) .^ 2
+    else
+        throw(ArgumentError("""
+        Unsupported β schedule mode: `$β_schedule`.
+        Supported modes: `:linear`, `:scaled_linear`.
+        """))
+    end
 
     α = 1f0 .- β
     α̅ = cumprod(α)
     α_final = α_to_one ? 1f0 : α̅[1]
 
-    _timesteps = (n_train_steps - 1):-1:0 |> collect
+    _timesteps = (n_train_timesteps - 1):-1:0 |> collect
 
-    x_current = zeros(Float32, ntuple(_ -> 1, Val{nd}()))
-    sample = Array{Float32, nd}(undef, ntuple(_ -> 0, Val{nd}()))
+    x_current = zeros(Float32, ntuple(_ -> 1, Val(nd)))
+    sample = Array{Float32, nd}(undef, ntuple(_ -> 0, Val(nd)))
 
     PNDMScheduler(;
-        α̂=α̅, α, α̅, β, α_final, skip_prk_steps,
+        α̂=α̅, α, α̅, β, α_final, skip_prk_steps, step_offset,
         _timesteps,
         x_current, sample, xs=Array{Float32, nd}[],
-        n_train_steps)
+        n_train_timesteps)
 end
 
+for T in FluxDeviceAdaptors
+    @eval function Adapt.adapt_storage(to::$(T), pndm::PNDMScheduler)
+        PNDMScheduler(
+            Adapt.adapt(to, pndm.α̂),
+            pndm.α, pndm.α̅, pndm.β,
+            pndm.α_final, pndm.σ₀, pndm.skip_prk_steps, pndm.step_offset,
+            Adapt.adapt(to, pndm.timesteps),
+            pndm.prk_timesteps, pndm.plms_timesteps, pndm._timesteps,
+
+            Adapt.adapt(to, pndm.x_current),
+            Adapt.adapt(to, pndm.sample),
+            [Adapt.adapt(to, x) for x in pndm.xs],
+
+            pndm.n_train_timesteps, pndm.n_inference_timesteps, pndm.counter)
+    end
+end
+
+Base.ndims(::PNDMScheduler{A, T, S}) where {A, T, S} = ndims(S)
+
 """
-    set_timesteps!(pndm::PNDMScheduler, n_inference_steps::Int)
+    set_timesteps!(pndm::PNDMScheduler, n_inference_timesteps::Int)
 
 Set discrete timesteps used for the diffusion chain.
 
 # Arguments:
-- `n_inference_steps::Int`: Number of diffusion steps used when
+- `n_inference_timesteps::Int`: Number of diffusion steps used when
     generating samples with pre-trained model.
 """
-function set_timesteps!(pndm::PNDMScheduler, n_inference_steps::Int)
-    # TODO @assert n_inference_steps ≤ n_training_steps
-    # TODO step offset?
-
-    pndm.n_inference_steps = n_inference_steps
-    ratio = pndm.n_train_steps ÷ pndm.n_inference_steps
-    pndm._timesteps = round.(Int, collect(0:(pndm.n_inference_steps - 1)) .* ratio)
+function set_timesteps!(pndm::PNDMScheduler, n_inference_timesteps::Int)
+    # TODO @assert n_inference_timesteps ≤ n_training_steps
+    pndm.n_inference_timesteps = n_inference_timesteps
+    ratio = pndm.n_train_timesteps ÷ pndm.n_inference_timesteps
+    pndm._timesteps =
+        round.(Int, collect(0:(pndm.n_inference_timesteps - 1)) .* ratio) .+
+        pndm.step_offset
 
     if pndm.skip_prk_steps
         empty!(pndm.prk_timesteps)
@@ -148,7 +158,7 @@ to the differential equation.
 function step_prk!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
     A, T, S,
 }
-    ratio = pndm.n_train_steps ÷ pndm.n_inference_steps
+    ratio = pndm.n_train_timesteps ÷ pndm.n_inference_timesteps
     δt = (pndm.counter % 2 == 0) ? (ratio ÷ 2) : 0
     prev_t, t = t - δt, pndm.prk_timesteps[(pndm.counter ÷ 4) * 4 + 1]
 
@@ -183,13 +193,16 @@ function step_plms!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where
     Current amount is `$(length(pndm.xs))`.
     """)
 
-    ratio = pndm.n_train_steps ÷ pndm.n_inference_steps
+    ratio = pndm.n_train_timesteps ÷ pndm.n_inference_timesteps
     prev_t = t - ratio
 
     if pndm.counter == 1
         prev_t, t = t, t + ratio
     else
-        pndm.xs = pndm.xs[end - 2:end]
+        if !isempty(pndm.xs)
+            min_idx = max(1, length(pndm.xs) - 2)
+            pndm.xs = pndm.xs[min_idx:end]
+        end
         push!(pndm.xs, x)
     end
 
@@ -203,7 +216,7 @@ function step_plms!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where
     elseif length(pndm.xs) == 3
         x = (1f0 / 12f0) .* (
             23f0 .* pndm.xs[end] .- 16f0 .* pndm.xs[end - 1] .+
-            5f0 .* pndm.xs[end - 3])
+            5f0 .* pndm.xs[end - 2])
     else
         x = (1f0 / 24f0) .* (
             55f0 .* pndm.xs[end] .- 59f0 .* pndm.xs[end - 1] .+
@@ -239,4 +252,33 @@ function previous_sample(
     γ = √(αₜ₋ᵢ / αₜ)
     ϵ = αₜ * √βₜ₋ᵢ + √(αₜ₋ᵢ * αₜ * βₜ)
     γ .* sample .- (αₜ₋ᵢ - αₜ) .* x ./ ϵ
+end
+
+# HGF integration.
+
+"""
+Create PNDMScheduler from HuggingFace config file.
+
+# Arguments:
+
+- `nd::Int`: Number of the dimensions of the samples (e.g. 4 for images).
+- `model_name::String`: Name of the model.
+- `filename::String`: Path to a config file in the model's repo.
+
+# Example:
+
+```jldoctest
+julia> pndm = Diffusers.PNDMScheduler(HGF, 4;
+    model_name="runwayml/stable-diffusion-v1-5",
+    filename="scheduler/scheduler_config.json");
+```
+"""
+function PNDMScheduler(::Val{:HGF}, nd::Int; model_name::String, filename::String)
+    config = Diffusers.load_hgf_config(model_name; filename)
+    PNDMScheduler(nd;
+        β_schedule=Symbol(config["beta_schedule"]),
+        β_range=Float32(config["beta_start"]) => Float32(config["beta_end"]),
+        n_train_timesteps=config["num_train_timesteps"],
+        skip_prk_steps=config["skip_prk_steps"],
+        α_to_one=config["set_alpha_to_one"])
 end
