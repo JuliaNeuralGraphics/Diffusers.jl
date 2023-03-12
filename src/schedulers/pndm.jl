@@ -267,11 +267,10 @@ Create PNDMScheduler from HuggingFace config file.
 
 # Example:
 
-```jldoctest
+```julia
 julia> pndm = Diffusers.PNDMScheduler(HGF, 4;
     model_name="runwayml/stable-diffusion-v1-5",
     filename="scheduler/scheduler_config.json");
-
 ```
 """
 function PNDMScheduler(::Val{:HGF}, nd::Int; model_name::String, filename::String)
