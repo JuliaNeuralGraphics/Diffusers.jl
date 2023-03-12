@@ -10,11 +10,15 @@ julia> state_dict, cfg = load_pretrained_model("runwayml/stable-diffusion-v1-5",
 function load_pretrained_model(
     model_name::String; state_file::String, config_file::String,
 )
+    config = load_hgf_config(model_name; filename=config_file)
     state_url = HuggingFaceURL(model_name, state_file)
-    config_url = HuggingFaceURL(model_name, config_file)
     state = Pickle.Torch.THload(_hgf_download(state_url))
-    config = JSON3.read(read(_hgf_download(config_url)))
     state_dict_to_namedtuple(state), config
+end
+
+function load_hgf_config(model_name::String; filename::String)
+    url = HuggingFaceURL(model_name, filename)
+    JSON3.read(read(_hgf_download(url)))
 end
 
 function _hgf_download(
