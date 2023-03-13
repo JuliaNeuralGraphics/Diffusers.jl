@@ -127,4 +127,5 @@ function (block::SamplerBlock2D)(x::T) where T <: AbstractArray{Float32, 4}
     end
     block.sampler(x)
 end
+
 # TODO load_state!

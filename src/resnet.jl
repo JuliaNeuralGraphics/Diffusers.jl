@@ -112,7 +112,7 @@ function (block::ResnetBlock2D)(x::T, time_embedding::Maybe{E}) where {
     x = block.norm(x)
 
     if time_embedding ≢ nothing && block.embedding_scale_shift
-        scale, shift = chunk(time_embedding, 2; dims=3)
+        scale, shift = MLUtils.chunk(time_embedding, 2; dims=3)
         x = x .* (1f0 .+ scale) .+ shift
     end
 

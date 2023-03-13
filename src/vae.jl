@@ -49,7 +49,7 @@ end
 struct Decoder{C1, C2, N, U, M}
     conv_in::C1
     conv_out::C2
-    norm::N,
+    norm::N
     up_blocks::U
     mid_block::M
 end
