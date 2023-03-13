@@ -57,7 +57,7 @@ end
     @test y[1, 1, 1:5, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
 
-@testset "Load SD FeedForward" begin
+@testset "Load SD CrossAttnDownBlock2D" begin
     cattn = Diffusers.CrossAttnDownBlock2D(; in_channels=320, out_channels=320, 
     time_emb_channels=1280, n_layers=2, attn_n_heads=8, context_dim=768)
     Diffusers.load_state!(cattn, STATE.down_blocks[1])
@@ -67,4 +67,15 @@ end
     target_y = [3.5323777, 4.8788514, 4.8925233, 4.8956304, 4.8956304, 4.8956304]
     y = cattn(x, temb, context)
     @test y[1:6, 1, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+end
+
+@testset "Load SD CrossAttnMidBlock2D" begin
+    mid = Diffusers.CrossAttnMidBlock2D(; in_channels=1280, time_emb_channels=1280, attn_n_heads=8, context_dim=768)
+    Diffusers.load_state!(mid, STATE.mid_block)
+    
+    # pipe.unet.mid_block(torch.ones(1, 1280, 8, 8), torch.ones(1, 1280), torch.ones(1, 77, 768)).detach().numpy()[0, :6, 0, 0]
+    target_y = [-2.2978039, -0.58777064, -2.1970692, -2.0825987, 3.975503, -3.1240108]
+    x, temb, context = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1), ones(Float32, 768, 77, 1)
+    y = mid(x, temb, context)
+    @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
