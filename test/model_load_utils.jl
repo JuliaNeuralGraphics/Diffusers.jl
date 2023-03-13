@@ -71,7 +71,7 @@ end
 
 @testset "Load SD CrossAttnMidBlock2D" begin
     mid = Diffusers.CrossAttnMidBlock2D(; in_channels=1280, time_emb_channels=1280, attn_n_heads=8, context_dim=768)
-    Diffusers.load_state!(mid, STATE_DICT.mid_block)
+    Diffusers.load_state!(mid, STATE.mid_block)
     
     # pipe.unet.mid_block(torch.ones(1, 1280, 8, 8), torch.ones(1, 1280), torch.ones(1, 77, 768)).detach().numpy()[0, :6, 0, 0]
     target_y = [-2.2978039, -0.58777064, -2.1970692, -2.0825987, 3.975503, -3.1240108]
