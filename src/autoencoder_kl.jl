@@ -1,37 +1,36 @@
-struct DiagonalGaussian{M, S, N, L}
-    μ::M
-    σ::S
-    ν::N
-    log_σ::L
+struct AuotoencoderKL{E, D, C1, C2}
+    encoder::E
+    decoder::D
+    quant_conv::C1
+    post_quant_conv::C2
+end
+Flux.@functor AutoencoderKL
+
+function AutoencoderKL(
+    channels::Pair{Int, Int};
+    latent_channels::Int = 4,
+    block_out_channels = (64,),
+    n_block_layers::Int = 1,
+    λ = swish,
+    n_groups::Int = 32,
+    sample_size::Int = 32,
+    scaling_factor::Real = 0.18215,
+)
+    channels_in, channels_out = channels
+    encoder = Encoder(channels_in => latent_channels;
+        block_out_channels, n_block_layers,
+        n_groups, λ, double_z=true)
+    decoder = Decoder(latent_channels => channels_out;
+        block_out_channels, n_block_layers,
+        n_groups, λ)
+
+    quant_conv = Conv((1, 1), (2 * latent_channels) => (2 * latent_channels))
+    post_quant_conv = Conv((1, 1), latent_channels => latent_channels)
+
+    # TODO tiling & slicing
+
+    AutoencoderKL(encoder, decoder, quant_conv, post_quant_conv)
 end
 
-function DiagonalGaussian(θ)
-    μ, log_σ = MLUtils.chunk(θ, 2; dims=ndims(θ) - 1) # Slice channel dim.
-    clamp!(log_σ, -30f0, 20f0)
-    σ = exp.(0.5f0 .* log_σ)
-    ν = exp.(log_σ)
-    DiagonalGaussian(μ, σ, ν, log_σ)
-end
-
-function sample(dg::DiagonalGaussian{M, S, N, L}) where {M, S, N, L}
-    ξ = randn(eltype(M), size(dg.μ)) # TODO generate on device
-    dg.μ .+ dg.σ .* ξ
-end
-
-# Kullback–Leibler divergence.
-function kl(
-    dg::DiagonalGaussian{T}, other::Maybe{DiagonalGaussian{T}} = nothing,
-) where T <: AbstractArray{Float32, 4}
-    dims = (1, 2, 3)
-    0.5f0 .* (isnothing(other) ?
-        sum(dg.μ.^2 .+ dg.ν .- dg.log_σ .- 1f0; dims) :
-        sum(
-            (dg.μ .- other.μ).^2 ./ other.ν .+
-            dg.ν ./ other.ν .-
-            dg.log_σ .+ other.log_σ .- 1f0; dims))
-end
-
-# Negative Log Likelihood.
-function nll(dg::DiagonalGaussian, x; dims = (1, 2, 3))
-    0.5f0 .* sum(log(2f0 .* π) .+ dg.log_σ .+ (x .- dg.μ).^2 ./ dg.ν; dims)
-end
+# TODO encode & decode
+# TODO forward
