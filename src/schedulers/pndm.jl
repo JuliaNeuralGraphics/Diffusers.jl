@@ -273,8 +273,8 @@ julia> pndm = Diffusers.PNDMScheduler(HGF, 4;
     filename="scheduler/scheduler_config.json");
 ```
 """
-function PNDMScheduler(::Val{:HGF}, nd::Int; model_name::String, filename::String)
-    config = Diffusers.load_hgf_config(model_name; filename)
+function PNDMScheduler(model_name::String, nd::Int; config_file::String)
+    config = Diffusers.load_hgf_config(model_name; filename=config_file)
     PNDMScheduler(nd;
         β_schedule=Symbol(config["beta_schedule"]),
         β_range=Float32(config["beta_start"]) => Float32(config["beta_end"]),

@@ -34,7 +34,6 @@ function Upsample2D(
         identity
     end)
 end
-# TODO load_state! for both
 
 function (up::Upsample2D{C})(
     x::T; output_size::Maybe{Tuple{Int, Int}} = nothing,

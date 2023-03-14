@@ -155,6 +155,11 @@ function load_state!(tr::CrossAttnMidBlock2D, state)
     end
 end
 
+# TODO Encoder
+# TODO Decoder
+# TODO Downsample2D
+# TODO Upsample2D
+
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return

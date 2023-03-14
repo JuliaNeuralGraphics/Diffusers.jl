@@ -1,8 +1,10 @@
-struct AuotoencoderKL{E, D, C1, C2}
+struct AutoencoderKL{E, D, C1, C2}
     encoder::E
     decoder::D
     quant_conv::C1
     post_quant_conv::C2
+
+    scaling_factor::Float32
 end
 Flux.@functor AutoencoderKL
 
@@ -13,8 +15,7 @@ function AutoencoderKL(
     n_block_layers::Int = 1,
     λ = swish,
     n_groups::Int = 32,
-    sample_size::Int = 32,
-    scaling_factor::Real = 0.18215,
+    scaling_factor::Float32 = 0.18215f0,
 )
     channels_in, channels_out = channels
     encoder = Encoder(channels_in => latent_channels;
@@ -26,11 +27,42 @@ function AutoencoderKL(
 
     quant_conv = Conv((1, 1), (2 * latent_channels) => (2 * latent_channels))
     post_quant_conv = Conv((1, 1), latent_channels => latent_channels)
-
-    # TODO tiling & slicing
-
-    AutoencoderKL(encoder, decoder, quant_conv, post_quant_conv)
+    AutoencoderKL(encoder, decoder, quant_conv, post_quant_conv, scaling_factor)
 end
 
-# TODO encode & decode
-# TODO forward
+function encode(kl::AutoencoderKL, x::T) where T <: AbstractArray{Float32, 4}
+    h = kl.encoder(x)
+    moments = kl.quant_conv(h)
+    DiagonalGaussian(moments)
+end
+
+function decode(kl::AutoencoderKL, z::T) where T <: AbstractArray{Float32, 4}
+    kl.decoder(kl.post_quant_conv(z))
+end
+
+function (kl::AutoencoderKL)(
+    x::T; sample_posterion::Bool = false,
+) where T <: AbstractArray{Float32, 4}
+    posterior = encode(kl, x)
+    if sample_posterion
+        z = sample(posterior)
+    else
+        z = mode(posterior)
+    end
+    decode(kl, z)
+end
+
+# TODO tiled encode & decode?
+
+# HGF integration.
+
+function AutoencoderKL(model_name::String; weights_file::String, config_file::String)
+    # TODO load weights
+    cfg = load_hgf_config(model_name; filename=config_file)
+    AutoencoderKL(
+        cfg["in_channels"] => cfg["out_channels"];
+        latent_channels=cfg["latent_channels"],
+        block_out_channels=Tuple(cfg["block_out_channels"]),
+        n_groups=cfg["norm_num_groups"],
+        n_block_layers=cfg["layers_per_block"])
+end

@@ -93,8 +93,6 @@ function (dec::Decoder)(x::T) where T <: AbstractArray{Float32, 4}
     dec.conv_out(dec.norm(x))
 end
 
-# TODO load_state! for both
-
 struct DiagonalGaussian{M, S, N, L}
     μ::M
     σ::S
@@ -132,3 +130,5 @@ end
 function nll(dg::DiagonalGaussian, x; dims = (1, 2, 3))
     0.5f0 .* sum(log(2f0 .* π) .+ dg.log_σ .+ (x .- dg.μ).^2 ./ dg.ν; dims)
 end
+
+mode(dg::DiagonalGaussian) = dg.μ
