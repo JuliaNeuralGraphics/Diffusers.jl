@@ -184,3 +184,83 @@ function (mb::MidBlock2D{R, A})(
     end
     x
 end
+
+struct UpBlock2D{R}
+    resnets::R
+    sampler::Maybe{Upsample2D}  # this can also be identity
+end
+Flux.@functor UpBlock2D
+
+function UpBlock2D(
+    channels::Pair{Int, Int}, prev_out_channel::Int, temb_channels::Int;
+    n_layers::Int = 1, n_groups::Int = 32,
+    dropout::Real = 0
+)
+    in_channels, out_channels = channels
+    resnets = []
+
+    for i in 1:n_layers
+        res_skip_channels = (i == n_layers - 1) ? in_channels : out_channels
+        res_in_channels = (i == 0) ? prev_out_channel : out_channels
+        push!(resnets, ResnetBlock2D(
+            (res_in_channels + res_skip_channels) => out_channels;
+            time_emb_channels=temb_channels, embedding_scale_shift,
+            n_groups, dropout, λ))
+    end
+    resnets = Chain(resnets...)
+
+    sampler = add_sampler ?
+        Upsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) : nothing
+    UpBlock2D(resnets, sampler)
+end
+
+function (block::UpBlock2D)(x::T, skip_x::NTuple, temb::E) where {
+    T <: AbstractArray{Float32, 4}, E <: AbstractArray{Float32, 2},
+}
+    skip_x = reverse(skip_x)
+    for (i, rn) in enumerate(block.resnets)
+        skip = skip_x[i]
+        x = cat(x, skip; dims=3)
+        x = rn(x, temb)
+    end
+    if ! isnothing(block.sampler) x = block.sampler(x) end
+    return x
+end
+
+
+struct DownBlock2D{R}
+    resnets::R
+    sampler::Maybe{Downsample2D} # harish: not identity; what type then?
+end
+Flux.@functor DownBlock2D
+
+function DownBlock2D(
+    channels::Pair{Int, Int}, temb_channels::Int; n_layers::Int = 1,
+    n_groups::Int = 32, embedding_scale_shift::Bool = false,
+    add_sampler::Bool = true, sampler_pad::Int = 1, λ = swish, dropout::Real = 0,
+)
+    in_channels, out_channels = channels
+    resnets = []
+
+    for i in 1:n_layers
+        in_channels = (i == 0) ? in_channels : out_channels
+        push!(resnets, ResnetBlock2D(
+            in_channels => out_channels; time_emb_channels=temb_channels,
+            embedding_scale_shift,
+            n_groups, dropout, λ))
+    end
+    resnets = Chain(resnets...)
+    sampler = add_sampler ?
+        Downsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) : nothing
+    DownBlock2D(resnets, sampler)
+end
+
+function (block::DownBlock2D)(x::T, temb::E) where {
+    T <: AbstractArray{Float32, 4}, E <: AbstractArray{Float32, 2},
+}
+    for rn in block.resnets
+        x = rn(x, temb)
+    end
+    if ! isnothing(block.sampler) x = block.sampler(x) end
+    return x
+end

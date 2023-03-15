@@ -209,6 +209,20 @@ end
 
 load_state!(up::Upsample2D, state) = load_state!(up.conv, state.conv)
 
+function load_state!(u::UpBlock2D, state)
+    load_state!(u.resnets, state.resnets)
+    if typeof(u.sampler) <: Upsample2D
+        load_state!(u.sampler.conv, state.upsamplers[1].conv)
+    end
+end
+
+function load_state!(d::DownBlock2D, state)
+    load_state!(d.resnets, state.resnets)
+    if typeof(d.sampler) <: Downsample2D
+        load_state!(d.sampler.conv, state.downsamplers[1].conv)
+    end
+end
+
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return

@@ -80,3 +80,27 @@ end
     y = mid(x, temb, context)
     @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
+
+@testset "Load SD UpBlock2D" begin
+    u = Diffusers.UpBlock2D(1280=>1280, 1280, 1280; n_layers=3)
+    Diffusers.load_state!(u, STATE.up_blocks[1])
+    
+    # x = torch.ones(1, 1280, 8, 8)
+    # pipe.unet.up_blocks[0](x, (x, x, x), torch.ones(1, 1280)).detach().numpy()[0, :6, 0, 0]
+    target_y = [0.2308563, 0.2685722, 1.0352244, 0.45586765, 1.643967, 0.10508753]
+    skip = (ones(Float32, 8, 8, 1280, 1), ones(Float32, 8, 8, 1280, 1), ones(Float32, 8, 8, 1280, 1))
+    x, temb = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1)
+    y = u(x, skip, temb)
+    @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+end
+
+@testset "Load SD DownBlock2D" begin
+    d = Diffusers.DownBlock2D(1280=>1280, 1280; n_layers=2, add_sampler=false)
+    Diffusers.load_state!(d, STATE.down_blocks[4])
+
+    # pipe.unet.down_blocks[3](torch.ones(1, 1280, 8, 8),torch.ones(1, 1280))[0].numpy()[0, :6, 0, 0]
+    target_y = [2.0826728, 1.078491, 1.1676872, 0.97314227, 0.67884475, 2.0286326]
+    x, temb = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1)
+    y = d(x, temb)
+    @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+end

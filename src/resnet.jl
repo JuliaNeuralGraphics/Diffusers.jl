@@ -118,3 +118,55 @@ function (block::ResnetBlock2D)(x::T, time_embedding::Maybe{E}) where {
 
     (block.out_proj(x) .+ block.conv_shortcut(skip)) ./ block.scale
 end
+
+# TODO: Remove after VAE PR
+struct Downsample2D{C}
+    conv::C
+end
+Flux.@functor Downsample2D
+
+function Downsample2D(
+    channels::Pair{Int, Int}; use_conv::Bool = false, pad::Int = 1,
+)
+    Downsample2D(use_conv ?
+        Conv((3, 3), channels; stride=2, pad) :
+        MeanPool((2, 2)))
+end
+
+function (down::Downsample2D)(x::T) where T <: AbstractArray{Float32, 4}
+    down.conv(x)
+end
+
+struct Upsample2D{C}
+    conv::C
+end
+Flux.@functor Upsample2D
+
+function Upsample2D(
+    channels::Pair{Int, Int};
+    use_conv::Bool = false,
+    use_transpose_conv::Bool = false,
+    pad::Int = 1,
+)
+    Upsample2D(if use_transpose_conv
+        ConvTranspose((4, 4), channels; stride=2, pad)
+    elseif use_conv
+        Conv((3, 3), channels; pad)
+    else
+        identity
+    end)
+end
+# TODO load_state! for both
+
+function (up::Upsample2D{C})(
+    x::T; output_size::Maybe{Tuple{Int, Int}} = nothing,
+) where {C, T <: AbstractArray{Float32, 4}}
+    C <: ConvTranspose && (x = up.conv(x);)
+
+    x = isnothing(output_size) ?
+        upsample_nearest(x, (2, 2)) :
+        upsample_nearest(x; size=output_size)
+
+    C <: Conv && (x = up.conv(x);)
+    return x
+end
