@@ -37,14 +37,15 @@ function encode(kl::AutoencoderKL, x::T) where T <: AbstractArray{Float32, 4}
 end
 
 function decode(kl::AutoencoderKL, z::T) where T <: AbstractArray{Float32, 4}
-    kl.decoder(kl.post_quant_conv(z))
+    h = kl.post_quant_conv(z)
+    kl.decoder(h)
 end
 
 function (kl::AutoencoderKL)(
-    x::T; sample_posterion::Bool = false,
+    x::T; sample_posterior::Bool = false,
 ) where T <: AbstractArray{Float32, 4}
     posterior = encode(kl, x)
-    if sample_posterion
+    if sample_posterior
         z = sample(posterior)
     else
         z = mode(posterior)
@@ -56,13 +57,14 @@ end
 
 # HGF integration.
 
-function AutoencoderKL(model_name::String; weights_file::String, config_file::String)
-    # TODO load weights
-    cfg = load_hgf_config(model_name; filename=config_file)
-    AutoencoderKL(
+function AutoencoderKL(model_name::String; state_file::String, config_file::String)
+    state, cfg = load_pretrained_model(model_name; state_file, config_file)
+    vae = AutoencoderKL(
         cfg["in_channels"] => cfg["out_channels"];
         latent_channels=cfg["latent_channels"],
         block_out_channels=Tuple(cfg["block_out_channels"]),
         n_groups=cfg["norm_num_groups"],
         n_block_layers=cfg["layers_per_block"])
+    load_state!(vae, state)
+    vae
 end

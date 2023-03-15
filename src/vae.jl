@@ -24,13 +24,17 @@ function Encoder(
         input_channels, output_channels = output_channels, boc
         is_final = i == length(block_out_channels)
 
-        push!(down_blocks, SamplerBlock2D(
-            input_channels => output_channels, Downsample2D;
+        push!(down_blocks, SamplerBlock2D{Downsample2D}(
+            input_channels => output_channels;
             n_groups, n_layers=n_block_layers,
-            add_sampler=!is_final, sampler_pad=0, λ))
+            add_sampler=!is_final, λ))
     end
 
-    mid_block = identity # TODO UNetMidBlock2D
+    mid_block = MidBlock2D(
+        block_out_channels[end];
+        time_emb_channels=nothing,
+        n_heads=1, n_groups, λ,
+        embedding_scale_shift=false)
 
     norm = GroupNorm(output_channels, n_groups, λ)
     channels_out = double_z ? (channels_out * 2) : channels_out
@@ -72,13 +76,17 @@ function Decoder(
         input_channels, output_channels = output_channels, boc
         is_final = i == length(block_out_channels)
 
-        push!(up_blocks, SamplerBlock2D(
-            input_channels => output_channels, Upsample2D;
+        push!(up_blocks, SamplerBlock2D{Upsample2D}(
+            input_channels => output_channels;
             n_groups, n_layers=n_block_layers + 1,
             add_sampler=!is_final, λ))
     end
 
-    mid_block = identity # TODO UnetMidBlock2D
+    mid_block = MidBlock2D(
+        block_out_channels[1];
+        time_emb_channels=nothing,
+        n_heads=1, n_groups, λ,
+        embedding_scale_shift=false)
 
     norm = GroupNorm(output_channels, n_groups, λ)
     conv_out = Conv((3, 3), output_channels => channels_out; pad=1)

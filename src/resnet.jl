@@ -55,16 +55,17 @@ struct ResnetBlock2D{I, O, N, S, E}
     conv_shortcut::S
     time_emb_proj::E
 
+    scale::Float32
     embedding_scale_shift::Bool
 end
 Flux.@functor ResnetBlock2D
 
-function ResnetBlock2D(channels::Pair{Int, Int}; # TODO update tests
+function ResnetBlock2D(channels::Pair{Int, Int};
     n_groups::Int = 32, n_groups_out::Maybe{Int} = nothing,
     embedding_scale_shift::Bool = false,
     time_emb_channels::Maybe{Int} = 512,
     use_shortcut::Maybe{Bool} = nothing, conv_out_channels::Maybe{Int} = nothing,
-    dropout::Real = 0, λ = swish,
+    dropout::Real = 0, λ = swish, scale::Float32 = 1f0,
 )
     in_channels, out_channels = channels
     # out_channels = isnothing(out_channels) ? in_channels : out_channels
@@ -94,7 +95,7 @@ function ResnetBlock2D(channels::Pair{Int, Int}; # TODO update tests
 
     ResnetBlock2D(
         init_proj, out_proj, norm, conv_shortcut, time_emb_proj,
-        embedding_scale_shift)
+        scale, embedding_scale_shift)
 end
 
 function (block::ResnetBlock2D)(x::T, time_embedding::Maybe{E}) where {
@@ -115,5 +116,5 @@ function (block::ResnetBlock2D)(x::T, time_embedding::Maybe{E}) where {
         x = x .* (1f0 .+ scale) .+ shift
     end
 
-    block.out_proj(x) .+ block.conv_shortcut(skip)
+    (block.out_proj(x) .+ block.conv_shortcut(skip)) ./ block.scale
 end

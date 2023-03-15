@@ -1,5 +1,5 @@
 @testset "Load SD cross_attention & do a forward" begin
-    attn = Diffusers.CrossAttention(; dim=320, head_dim=40)
+    attn = Diffusers.Attention(320; bias=false, context_dim=320, head_dim=40)
     Diffusers.load_state!(attn, STATE.down_blocks[1].attentions[1].transformer_blocks[1].attn1)
 
     # Manually obtained, pytorch row wise approx equals jl col wise
@@ -7,7 +7,7 @@
     # where pipe is the StableDiffusionPipeline
     target_y = [0.15594974, 0.01136263, 0.27801704, 0.31772622, 0.63947713]
     x = ones(Float32, 320, 1, 2)
-    y = attn(x)
+    y = attn(x, x)
     @test y[1:5, 1, 1] ≈ target_y atol=1e-5 rtol=1e-5
 end
 
@@ -46,7 +46,7 @@ end
 end
 
 @testset "Load SD FeedForward" begin
-    rs = Diffusers.ResnetBlock2D(; in_channels=320, time_emb_channels=1280)
+    rs = Diffusers.ResnetBlock2D(320 => 320; time_emb_channels=1280)
     Diffusers.load_state!(rs, STATE.down_blocks[1].resnets[1])
 
     x, time_embedding = ones(Float32, 64, 64, 320, 1), ones(Float32, 1280, 1)
@@ -58,7 +58,7 @@ end
 end
 
 @testset "Load SD CrossAttnDownBlock2D" begin
-    cattn = Diffusers.CrossAttnDownBlock2D(; in_channels=320, out_channels=320, 
+    cattn = Diffusers.CrossAttnDownBlock2D(; in_channels=320, out_channels=320,
     time_emb_channels=1280, n_layers=2, attn_n_heads=8, context_dim=768)
     Diffusers.load_state!(cattn, STATE.down_blocks[1])
 
@@ -70,9 +70,10 @@ end
 end
 
 @testset "Load SD CrossAttnMidBlock2D" begin
-    mid = Diffusers.CrossAttnMidBlock2D(; in_channels=1280, time_emb_channels=1280, attn_n_heads=8, context_dim=768)
+    mid = Diffusers.CrossAttnMidBlock2D(;
+        in_channels=1280, time_emb_channels=1280, n_heads=8, context_dim=768)
     Diffusers.load_state!(mid, STATE.mid_block)
-    
+
     # pipe.unet.mid_block(torch.ones(1, 1280, 8, 8), torch.ones(1, 1280), torch.ones(1, 77, 768)).detach().numpy()[0, :6, 0, 0]
     target_y = [-2.2978039, -0.58777064, -2.1970692, -2.0825987, 3.975503, -3.1240108]
     x, temb, context = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1), ones(Float32, 768, 77, 1)
