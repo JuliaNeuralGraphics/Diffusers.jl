@@ -188,7 +188,7 @@ end
 struct CrossAttnUpBlock2D{R, A}
     resnets::R
     attentions::A
-    sampler::Maybe{Upsample2D}
+    sampler::Union{typeof(identity), Upsample2D}
 end
 Flux.@functor CrossAttnUpBlock2D
 
@@ -213,7 +213,7 @@ function CrossAttnUpBlock2D(
             use_linear_projection, context_dim))
     end
     sampler = add_upsample ? 
-        Upsample2D(out_channels=>out_channels; use_conv=true) : nothing
+        Upsample2D(out_channels=>out_channels; use_conv=true) : identity
     CrossAttnUpBlock2D(Chain(resnets...), Chain(attentions...), sampler)
 end
 
@@ -231,14 +231,13 @@ function (block::CrossAttnUpBlock2D)(
         x = rn(x, temb)
         x = attn(x, context)
     end
-    if ! isnothing(block.sampler) x = block.sampler(x) end
-    return x
+    x = block.sampler(x)
 end
 
 
 struct UpBlock2D{R}
     resnets::R
-    sampler::Maybe{Upsample2D}  # this can also be identity
+    sampler::Union{typeof(identity), Upsample2D}
 end
 Flux.@functor UpBlock2D
 
@@ -261,7 +260,7 @@ function UpBlock2D(
     resnets = Chain(resnets...)
 
     sampler = add_sampler ?
-        Upsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) : nothing
+        Upsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) : identity
     UpBlock2D(resnets, sampler)
 end
 
@@ -274,14 +273,13 @@ function (block::UpBlock2D)(x::T, skip_x::NTuple, temb::E) where {
         x = cat(x, skip; dims=3)
         x = rn(x, temb)
     end
-    if ! isnothing(block.sampler) x = block.sampler(x) end
-    return x
+    x = block.sampler(x)
 end
 
 
 struct DownBlock2D{R}
     resnets::R
-    sampler::Maybe{Downsample2D} # harish: not identity; what type then?
+    sampler::Union{typeof(identity), Downsample2D}
 end
 Flux.@functor DownBlock2D
 
@@ -302,7 +300,7 @@ function DownBlock2D(
     end
     resnets = Chain(resnets...)
     sampler = add_sampler ?
-        Downsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) : nothing
+        Downsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) : identity
     DownBlock2D(resnets, sampler)
 end
 
@@ -312,6 +310,5 @@ function (block::DownBlock2D)(x::T, temb::E) where {
     for rn in block.resnets
         x = rn(x, temb)
     end
-    if ! isnothing(block.sampler) x = block.sampler(x) end
-    return x
+    x = block.sampler(x)
 end
