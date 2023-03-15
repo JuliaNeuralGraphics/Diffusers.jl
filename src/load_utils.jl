@@ -209,6 +209,14 @@ end
 
 load_state!(up::Upsample2D, state) = load_state!(up.conv, state.conv)
 
+function load_state!(u::CrossAttnUpBlock2D, state)
+    load_state!(u.resnets, state.resnets)
+    load_state!(u.attentions, state.attentions)
+    if typeof(u.sampler) <: Upsample2D
+        load_state!(u.sampler.conv, state.upsamplers[1].conv)
+    end
+end
+
 function load_state!(u::UpBlock2D, state)
     load_state!(u.resnets, state.resnets)
     if typeof(u.sampler) <: Upsample2D

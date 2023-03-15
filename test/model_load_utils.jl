@@ -81,6 +81,19 @@ end
     @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
 
+@testset "Load SD CrossAttnUpBlock2D" begin
+    u = Diffusers.CrossAttnUpBlock2D(640=>1280, 1280, 1280; n_layers=3, attn_n_heads=8, context_dim=768)
+    Diffusers.load_state!(u, STATE.up_blocks[2])
+    
+    # x = torch.ones(1, 1280, 16, 16)
+    # pipe.unet.up_blocks[1](x, (torch.ones(1, 640, 16, 16), x, x), torch.ones(1, 1280), torch.ones(1, 77, 768))[0, :6, 0, 0]
+    target_y = [-25.81815, -9.393141, -4.554784, 4.673693, 12.621728, -0.49337524]
+    x = ones(Float32, 16, 16, 1280, 1)
+    tl = (ones(Float32, 16, 16, 640, 1), x, x)
+    y = u(x, tl, ones(Float32, 1280, 1), ones(Float32, 768, 77, 1))
+    @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+end
+
 @testset "Load SD UpBlock2D" begin
     u = Diffusers.UpBlock2D(1280=>1280, 1280, 1280; n_layers=3)
     Diffusers.load_state!(u, STATE.up_blocks[1])
