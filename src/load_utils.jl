@@ -94,8 +94,8 @@ function load_state!(layer::Flux.LayerNorm, state)
 end
 
 function load_state!(layer::Flux.GroupNorm, state)
-    layer.γ = state.weight
-    layer.β = state.bias
+    layer.γ .= state.weight
+    layer.β .= state.bias
     return nothing
 end
 
@@ -197,13 +197,15 @@ end
 
 function load_state!(sampler::SamplerBlock2D{R, S}, state) where {R, S}
     load_state!(sampler.resnets, state.resnets)
-    !(:donwsamplers in keys(state) || :upsamplers in keys(state)) && return
+    !(:downsamplers in keys(state) || :upsamplers in keys(state)) && return
 
     sampler_key = S <: Downsample2D ? (:downsamplers) : (:upsamplers)
     load_state!(sampler.sampler, getfield(state, sampler_key)[1])
 end
 
-load_state!(down::Downsample2D, state) = load_state!(down.conv, state.conv)
+function load_state!(down::Downsample2D, state)
+    load_state!(down.conv, state.conv)
+end
 
 load_state!(up::Upsample2D, state) = load_state!(up.conv, state.conv)
 

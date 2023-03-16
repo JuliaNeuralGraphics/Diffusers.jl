@@ -31,20 +31,24 @@ include("schedulers/pndm.jl")
 
 include("load_utils.jl")
 
+# >>> vae.encoder(x).sum()
+# tensor(28057.0957, grad_fn=<SumBackward0>)
+
 function main()
     kl = AutoencoderKL(
         "runwayml/stable-diffusion-v1-5";
         state_file="vae/diffusion_pytorch_model.bin",
         config_file="vae/config.json")
     x = ones(Float32, 256, 256, 3, 1)
-    @show sum(kl.encoder(x)) # TODO non-deterministic results
-    y = kl(x)
-    @show size(y)
-    @show sum(y)
+    @show sum(kl.encoder(x))
 
-    y = kl(x; sample_posterior = true)
-    @show size(y)
-    @show sum(y)
+    # y = kl(x)
+    # @show size(y)
+    # @show sum(y)
+
+    # y = kl(x; sample_posterior = true)
+    # @show size(y)
+    # @show sum(y)
 
     return
 end

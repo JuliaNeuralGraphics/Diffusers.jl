@@ -68,9 +68,9 @@ function ResnetBlock2D(channels::Pair{Int, Int};
     dropout::Real = 0, λ = swish, scale::Float32 = 1f0,
 )
     in_channels, out_channels = channels
-    # out_channels = isnothing(out_channels) ? in_channels : out_channels
     n_groups_out = isnothing(n_groups_out) ? n_groups : n_groups_out
     conv_out_channels = isnothing(conv_out_channels) ? out_channels : conv_out_channels
+
     use_shortcut = isnothing(use_shortcut) ?
         (in_channels != conv_out_channels) : use_shortcut
     time_emb_out_channels = embedding_scale_shift ?
