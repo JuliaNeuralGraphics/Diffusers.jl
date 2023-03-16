@@ -17,4 +17,7 @@ const STATE, CONFIG = Diffusers.load_pretrained_model(
     @testset "Schedulers" begin
         include("schedulers.jl")
     end
+    @testset "Tokenizers" begin
+        include("tokenizers.jl")
+    end
 end

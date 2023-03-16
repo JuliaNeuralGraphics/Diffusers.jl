@@ -9,6 +9,7 @@ Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 HuggingFaceApi = "3cc741c3-0c9d-4fbe-84fa-cdec264173de"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Pickle = "fbb45041-c46e-462f-888f-7c521cafbc2c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
