@@ -133,6 +133,11 @@ function (block::SamplerBlock2D)(x::T) where T <: AbstractArray{Float32, 4}
 end
 
 # TODO all mid blocks can share this
+"""
+Generic UNet middle block.
+
+In HGF diffusers it corresponds to `UNetMidBlock2D<attention-layer-name>`.
+"""
 struct MidBlock2D{R, A}
     resnets::R
     attentions::A
