@@ -8,6 +8,7 @@ import Pickle
 using Adapt
 using Flux
 using HuggingFaceApi
+using OrderedCollections
 
 const Maybe{T} = Union{Nothing, T}
 
@@ -28,6 +29,7 @@ include("vae.jl")
 include("autoencoder_kl.jl")
 
 include("schedulers/pndm.jl")
+include("tokenizers/clip.jl")
 
 include("load_utils.jl")
 
@@ -40,7 +42,9 @@ function main()
         state_file="vae/diffusion_pytorch_model.bin",
         config_file="vae/config.json")
     x = ones(Float32, 256, 256, 3, 1)
+
     @show sum(kl.encoder(x))
+    @show sum(kl(x))
 
     # y = kl(x)
     # @show size(y)
@@ -51,6 +55,31 @@ function main()
     # @show sum(y)
 
     return
+end
+
+function tk()
+    input_texts = [
+        "Hello, world!",
+        "There is nothing basically... I mean it quite literally",
+        "I was now on a dark path, unsettled by a future filled with big data and small comprehension.",
+    ]
+    println("Input texts:")
+    display(input_texts); println()
+
+    tokenizer = CLIPTokenizer()
+    tokens, pad_mask = tokenize(tokenizer, input_texts; context_length=32)
+    println("Tokens:")
+    display(tokens); println()
+    display(pad_mask); println()
+    @show size(pad_mask)
+
+    texts = [
+        decode(tokenizer, @view(tokens[:, i]))
+        for i in 1:size(tokens, 2)]
+    println("Decoded texts:")
+    display(texts); println()
+
+    nothing
 end
 
 end
