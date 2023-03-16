@@ -1,5 +1,3 @@
-# TODO AdaLayerNorm
-
 struct TransformerBlock{A1, A2, F, L}
     attention_1::A1
     attention_2::A2
@@ -17,11 +15,15 @@ function TransformerBlock(;
     context_dim::Maybe{Int} = nothing, dropout::Real = 0,
     only_cross_attention::Bool = false,
 )
-    attention_1 = CrossAttention(; # maybe self-attention
-        dim, n_heads, head_dim, dropout,
-        context_dim=only_cross_attention ? context_dim : nothing)
-    attention_2 = isnothing(context_dim) ? nothing : CrossAttention(;
-        dim, n_heads, head_dim, dropout, context_dim)
+    only_cross_attention && isnothing(context_dim) && throw(ArgumentError("""
+        `only_cross_attention` is `true`, but `context_dim` is `nothing`.
+        """))
+
+    attention_1 = Attention(dim;
+        bias=false, n_heads, head_dim, dropout,
+        context_dim=only_cross_attention ? context_dim : dim)
+    attention_2 = isnothing(context_dim) ? nothing :
+        Attention(dim; bias=false, n_heads, head_dim, dropout, context_dim)
 
     fwd = FeedForward(; dim, dropout)
 
@@ -30,7 +32,8 @@ function TransformerBlock(;
     norm_3 = LayerNorm(dim)
 
     TransformerBlock(
-        attention_1, attention_2, fwd, norm_1, norm_2, norm_3,
+        attention_1, attention_2, fwd,
+        norm_1, norm_2, norm_3,
         only_cross_attention)
 end
 
@@ -41,8 +44,9 @@ function (block::TransformerBlock)(
     C <: AbstractArray{Float32, 3},
     M <: AbstractMatrix{Bool},
 }
+    xn = block.norm_1(x)
     a1 = block.attention_1(
-        block.norm_1(x), block.only_cross_attention ? context : nothing; mask)
+        xn, block.only_cross_attention ? context : xn; mask)
     x = a1 .+ x
 
     if block.attention_2 ≢ nothing

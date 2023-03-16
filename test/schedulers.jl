@@ -36,7 +36,6 @@
 end
 
 @testset "Load from HGF" begin
-    Diffusers.PNDMScheduler(HGF, 4;
-        model_name="runwayml/stable-diffusion-v1-5",
-        filename="scheduler/scheduler_config.json")
+    Diffusers.PNDMScheduler("runwayml/stable-diffusion-v1-5", 4;
+        config_file="scheduler/scheduler_config.json")
 end

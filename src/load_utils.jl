@@ -94,14 +94,26 @@ function load_state!(layer::Flux.LayerNorm, state)
 end
 
 function load_state!(layer::Flux.GroupNorm, state)
-    layer.γ = state.weight
-    layer.β = state.bias
+    layer.γ .= state.weight
+    layer.β .= state.bias
     return nothing
 end
 
-function load_state!(attn::CrossAttention, state)
-    for k in keys(state)
-        load_state!(getfield(attn, k), getfield(state, k))
+function load_state!(attn::Attention, state; use_cross_attention::Bool = false)
+    if cross_attention(attn) || use_cross_attention
+        load_state!(getfield(attn, :to_q), getfield(state, :to_q))
+        load_state!(getfield(attn, :to_k), getfield(state, :to_k))
+        load_state!(getfield(attn, :to_v), getfield(state, :to_v))
+        load_state!(getfield(attn, :to_out), getfield(state, :to_out))
+
+        :norm_cross in keys(state) &&
+            load_state!(getfield(attn, :norm), getfield(state, :norm_cross))
+    else
+        load_state!(getfield(attn, :to_q), getfield(state, :query))
+        load_state!(getfield(attn, :to_k), getfield(state, :key))
+        load_state!(getfield(attn, :to_v), getfield(state, :value))
+        load_state!(getfield(attn, :to_out)[1], getfield(state, :proj_attn))
+        load_state!(getfield(attn, :norm), getfield(state, :group_norm))
     end
 end
 
@@ -154,6 +166,48 @@ function load_state!(tr::CrossAttnMidBlock2D, state)
         load_state!(getfield(tr, k), getfield(state, k))
     end
 end
+
+function load_state!(vae::AutoencoderKL, state)
+    for k in keys(state)
+        load_state!(getfield(vae, k), getfield(state, k))
+    end
+end
+
+function load_state!(enc::Encoder, state)
+    load_state!(enc.conv_in, state.conv_in)
+    load_state!(enc.conv_out, state.conv_out)
+    load_state!(enc.norm, state.conv_norm_out)
+    load_state!(enc.mid_block, state.mid_block)
+    load_state!(enc.down_blocks, state.down_blocks)
+end
+
+function load_state!(dec::Decoder, state)
+    load_state!(dec.conv_in, state.conv_in)
+    load_state!(dec.conv_out, state.conv_out)
+    load_state!(dec.norm, state.conv_norm_out)
+    load_state!(dec.mid_block, state.mid_block)
+    load_state!(dec.up_blocks, state.up_blocks)
+end
+
+function load_state!(mb::MidBlock2D, state)
+    for k in keys(state)
+        load_state!(getfield(mb, k), getfield(state, k))
+    end
+end
+
+function load_state!(sampler::SamplerBlock2D{R, S}, state) where {R, S}
+    load_state!(sampler.resnets, state.resnets)
+    !(:downsamplers in keys(state) || :upsamplers in keys(state)) && return
+
+    sampler_key = S <: Downsample2D ? (:downsamplers) : (:upsamplers)
+    load_state!(sampler.sampler, getfield(state, sampler_key)[1])
+end
+
+function load_state!(down::Downsample2D, state)
+    load_state!(down.conv, state.conv)
+end
+
+load_state!(up::Upsample2D, state) = load_state!(up.conv, state.conv)
 
 load_state!(::Flux.Dropout, _) = return
 
