@@ -205,8 +205,9 @@ function CrossAttnUpBlock2D(
     for i in 1:n_layers
         res_skip_channels = (i == n_layers) ? in_channels : out_channels
         res_in_channels = (i == 1) ? prev_out_channel : out_channels   
-        push!(resnets, ResnetBlock2D(; in_channels=(res_in_channels + res_skip_channels),
-            out_channels, time_emb_channels, embedding_scale_shift=resnet_time_scale_shift,
+        push!(resnets, ResnetBlock2D(
+            (res_in_channels + res_skip_channels) => out_channels;
+            time_emb_channels, embedding_scale_shift=resnet_time_scale_shift,
             n_groups, dropout, λ=resnet_λ))
         push!(attentions, Transformer2D(; in_channels=out_channels, n_heads=attn_n_heads,
             dropout, head_dim=out_channels÷attn_n_heads, n_norm_groups=n_groups,
@@ -244,7 +245,8 @@ Flux.@functor UpBlock2D
 function UpBlock2D(
     channels::Pair{Int, Int}, prev_out_channel::Int, time_emb_channels::Int;
     n_layers::Int = 1, n_groups::Int = 32,
-    dropout::Real = 0
+    add_sampler::Bool = true, sampler_pad::Int = 1, λ = swish,
+    embedding_scale_shift::Bool = false, dropout::Real = 0
 )
     in_channels, out_channels = channels
     resnets = []
@@ -254,8 +256,7 @@ function UpBlock2D(
         res_in_channels = (i == 0) ? prev_out_channel : out_channels
         push!(resnets, ResnetBlock2D(
             (res_in_channels + res_skip_channels) => out_channels;
-            time_emb_channels=temb_channels, embedding_scale_shift,
-            n_groups, dropout, λ))
+            time_emb_channels, embedding_scale_shift, n_groups, dropout, λ))
     end
     resnets = Chain(resnets...)
 
