@@ -231,6 +231,11 @@ function load_state!(d::DownBlock2D, state)
     end
 end
 
+function load_state!(t::TimestepEmbedding, state)
+    load_state!(t.linear1, state.linear_1)
+    load_state!(t.linear2, state.linear_2)
+end
+
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return

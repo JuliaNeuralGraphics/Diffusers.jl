@@ -24,6 +24,7 @@ include("attention.jl")
 include("transformer.jl")
 include("resnet.jl")
 include("unet_2d.jl")
+include("timestep.jl")
 
 include("vae.jl")
 include("autoencoder_kl.jl")
