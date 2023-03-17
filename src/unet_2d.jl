@@ -285,24 +285,21 @@ end
 Flux.@functor DownBlock2D
 
 function DownBlock2D(
-    channels::Pair{Int, Int}, temb_channels::Int; n_layers::Int = 1,
+    channels::Pair{Int, Int}, time_emb_channels::Int; n_layers::Int = 1,
     n_groups::Int = 32, embedding_scale_shift::Bool = false,
     add_sampler::Bool = true, sampler_pad::Int = 1, λ = swish, dropout::Real = 0,
 )
     in_channels, out_channels = channels
     resnets = []
-
     for i in 1:n_layers
         in_channels = (i == 0) ? in_channels : out_channels
-        push!(resnets, ResnetBlock2D(
-            in_channels => out_channels; time_emb_channels=temb_channels,
-            embedding_scale_shift,
-            n_groups, dropout, λ))
+        push!(resnets, ResnetBlock2D(in_channels => out_channels; 
+            time_emb_channels, embedding_scale_shift, n_groups, dropout, λ))
     end
-    resnets = Chain(resnets...)
+    
     sampler = add_sampler ?
         Downsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) : identity
-    DownBlock2D(resnets, sampler)
+    DownBlock2D(Chain(resnets...), sampler)
 end
 
 function (block::DownBlock2D)(x::T, temb::E) where {
