@@ -212,3 +212,40 @@ load_state!(up::Upsample2D, state) = load_state!(up.conv, state.conv)
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return
+
+function load_state!(transformer::CLIPTextTransformer, state)
+    load_state!(transformer.embeddings, state.embeddings)
+    load_state!(transformer.encoder, state.encoder)
+    load_state!(transformer.final_layer_norm, state.final_layer_norm)
+end
+
+function load_state!(encoder::CLIPEncoder, state)
+    load_state!(encoder.layers, state.layers)
+end
+
+function load_state!(layer::CLIPEncoderLayer, state)
+    for key in keys(state)
+        load_state!(getfield(layer, key), getfield(state, key))
+    end
+end
+
+function load_state!(attn::CLIPAttention, state)
+    load_state!(attn.q, state.q_proj)
+    load_state!(attn.k, state.k_proj)
+    load_state!(attn.v, state.v_proj)
+    load_state!(attn.out, state.out_proj)
+end
+
+function load_state!(mlp::CLIPMLP, state)
+    load_state!(mlp.fc1, state.fc1)
+    load_state!(mlp.fc2, state.fc2)
+end
+
+function load_state!(emb::CLIPTextEmbeddings, state)
+    load_state!(emb.token_embedding, state.token_embedding)
+    load_state!(emb.position_embedding, state.position_embedding)
+end
+
+function load_state!(emb::Embedding, state)
+    copy!(emb.weights, transpose(state.weight))
+end

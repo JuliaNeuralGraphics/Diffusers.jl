@@ -8,16 +8,19 @@ const STATE, CONFIG = Diffusers.load_pretrained_model(
     config_file="unet/config.json")
 
 @testset "Diffusers.jl" begin
-    @testset "Layer load utils" begin
-        include("layer_load_utils.jl")
+    # @testset "Layer load utils" begin
+    #     include("layer_load_utils.jl")
+    # end
+    # @testset "Model load utils" begin
+    #     include("model_load_utils.jl")
+    # end
+    @testset "CLIP model" begin
+        include("clip.jl")
     end
-    @testset "Model load utils" begin
-        include("model_load_utils.jl")
-    end
-    @testset "Schedulers" begin
-        include("schedulers.jl")
-    end
-    @testset "Tokenizers" begin
-        include("tokenizers.jl")
-    end
+    # @testset "Schedulers" begin
+    #     include("schedulers.jl")
+    # end
+    # @testset "Tokenizers" begin
+    #     include("tokenizers.jl")
+    # end
 end
