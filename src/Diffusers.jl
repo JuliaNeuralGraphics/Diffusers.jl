@@ -30,7 +30,9 @@ include("vae.jl")
 include("autoencoder_kl.jl")
 
 include("schedulers/pndm.jl")
-include("tokenizers/clip.jl")
+include("clip/basic.jl")
+include("clip/tokenizer.jl")
+include("clip/models.jl")
 
 include("load_utils.jl")
 
@@ -82,5 +84,9 @@ function tk()
 
     nothing
 end
+
+"""
+- CLIPFeatureExtractor: https://github.com/huggingface/transformers/blob/fb366b9a2a94b38171896f6ba9fb9ae8bffd77af/src/transformers/models/clip/feature_extraction_clip.py#L26
+"""
 
 end

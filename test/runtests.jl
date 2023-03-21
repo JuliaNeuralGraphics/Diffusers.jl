@@ -14,6 +14,9 @@ const STATE, CONFIG = Diffusers.load_pretrained_model(
     @testset "Model load utils" begin
         include("model_load_utils.jl")
     end
+    @testset "CLIP model" begin
+        include("clip.jl")
+    end
     @testset "Schedulers" begin
         include("schedulers.jl")
     end
