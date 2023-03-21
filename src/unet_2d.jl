@@ -22,7 +22,7 @@ function CrossAttnDownBlock2D(;
         use_linear_projection, context_dim) for i in 1:n_layers]...)
 
     downsamplers = isnothing(add_downsample) ? identity : Chain(
-        Conv((3, 3), in_channels => out_channels; stride=2, pad=down_padding))
+        Conv((3, 3), out_channels => out_channels; stride=2, pad=down_padding))
 
     CrossAttnDownBlock2D(resnets, attentions, downsamplers)
 end
@@ -35,12 +35,15 @@ function (cattn::CrossAttnDownBlock2D)(
     C <: AbstractArray{Float32, 3},
 }
     # Note: attention_mask is not used
+    intermediate_outs = []
     for (resnet, attn) in zip(cattn.resnets, cattn.attentions)
         x = resnet(x, time_emb)
         x = attn(x, context)
+        push!(intermediate_outs, x)
     end
     x = cattn.downsamplers(x)
-    return x
+    push!(intermediate_outs, x)
+    return x, intermediate_outs...
 end
 
 # UNetMidBlock2DCrossAttn in diffusers.py
@@ -305,8 +308,12 @@ end
 function (block::DownBlock2D)(x::T, temb::E) where {
     T <: AbstractArray{Float32, 4}, E <: AbstractArray{Float32, 2},
 }
+    intermediate_outs = []
     for rn in block.resnets
         x = rn(x, temb)
+        push!(intermediate_outs, x)
     end
     x = block.sampler(x)
+    push!(intermediate_outs, x)
+    return x, intermediate_outs...
 end

@@ -65,7 +65,7 @@ end
     # pipe.unet.down_blocks[0](torch.ones(1, 320, 64, 64), torch.ones(1, 1280), torch.ones(1, 77, 768))
     x, temb, context = ones(Float32, 64, 64, 320, 1), ones(Float32, 1280, 1), ones(Float32, 768, 77, 1)
     target_y = [3.5323777, 4.8788514, 4.8925233, 4.8956304, 4.8956304, 4.8956304]
-    y = cattn(x, temb, context)
+    y, rest... = cattn(x, temb, context)
     @test y[1:6, 1, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
 
@@ -114,7 +114,7 @@ end
     # pipe.unet.down_blocks[3](torch.ones(1, 1280, 8, 8),torch.ones(1, 1280))[0].numpy()[0, :6, 0, 0]
     target_y = [2.0826728, 1.078491, 1.1676872, 0.97314227, 0.67884475, 2.0286326]
     x, temb = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1)
-    y = d(x, temb)
+    y, rest... = d(x, temb)
     @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
 
@@ -130,4 +130,14 @@ end
     target_y = [0.6799572, -0.7984292, 0.57806414, -0.67470044, 0.9926904, 0.8710014]
     y = Diffusers.get_time_embedding(ones(Int, 2)*981, 320)
     @test y[1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+end
+
+@testset "Load a SD UNet2DConditionModel with Flux & do forward" begin
+    unet = Diffusers.UNet2DConditionModel(; context_dim=768)
+    Diffusers.load_state!(unet, STATE)
+
+    # y = pipe.unet(torch.ones(1, 4, 64, 64), torch.tensor(981), torch.ones(1, 77, 768)).sample.detach().numpy()[0, 0, 0, :6]
+    target_y = [0.22149813, 0.16261391, 0.13246158, 0.11514825, 0.11287624, 0.11176358]
+    y = unet(ones(Float32, 64, 64, 4, 1), ones(Int, 1)*981, ones(Float32, 768, 77, 1))
+    @test y[1:6, 1, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end

@@ -236,6 +236,12 @@ function load_state!(t::TimestepEmbedding, state)
     load_state!(t.linear2, state.linear_2)
 end
 
+function load_state!(unet::UNet2DConditionModel, state)
+    for k in keys(state)
+        load_state!(getfield(unet, k), getfield(state, k))
+    end
+end
+
 load_state!(::Flux.Dropout, _) = return
 
 load_state!(::Nothing, _) = return

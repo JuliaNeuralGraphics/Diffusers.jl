@@ -21,4 +21,5 @@ function get_time_embedding(timesteps::AbstractArray{Int64, 1}, embedding_dim::I
     emb = reshape(repeat(emb, B), (size(emb)..., B))
     emb = emb .* timesteps' # row-wise
     emb = cat(cos.(emb), sin.(emb) ; dims=1)
+    emb = Float32.(emb)
 end
