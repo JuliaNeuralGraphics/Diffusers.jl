@@ -1,26 +1,28 @@
+quick_gelu(x) = x * sigmoid(1.702f0 * x)
+
 struct CLIPMLP{F1, F2}
     fc1::F1
     fc2::F2
 end
 Flux.@functor CLIPMLP
 
-function CLIPMLP(dims::Pair{Int, Int}, λ = gelu)
+function CLIPMLP(dims::Pair{Int, Int}, λ = quick_gelu)
     CLIPMLP(Dense(dims, λ), Dense(reverse(dims)))
 end
 
-function (mlp::CLIPMLP)(x::T) where T # TODO
+function (mlp::CLIPMLP)(x::T) where T <: AbstractArray{Float32, 3}
     mlp.fc2(mlp.fc1(x))
 end
 
-struct CLIPAttention{T}
+struct CLIPAttention{T, D}
     q::T
     k::T
     v::T
     out::T
+    dropout::D
 
     n_heads::Int
     head_dim::Int
-    dropout::Real
 end
 Flux.@functor CLIPAttention
 
@@ -30,13 +32,19 @@ function CLIPAttention(dim::Int; n_heads::Int, dropout::Real = 0)
     k = Dense(dim => dim)
     v = Dense(dim => dim)
     out = Dense(dim => dim)
-    # TODO correct dropout function
-    CLIPAttention(q, k, v, out, n_heads, head_dim, dropout)
+    CLIPAttention(
+        q, k, v, out,
+        iszero(dropout) ? identity : Dropout(dropout),
+        n_heads, head_dim)
 end
 
 function (attn::CLIPAttention)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing,
-) where {T, M1, M2}
+) where {
+    T <: AbstractArray{Float32, 3},
+    M1 <: AbstractMatrix{Bool},
+    M2 <: AbstractMatrix{Bool},
+}
     _, target_length, batch = size(x)
     q, k, v = attn.q(x), attn.k(x), attn.v(x)
 
@@ -49,8 +57,8 @@ function (attn::CLIPAttention)(
         mask = isnothing(mask) ? causal_mask : (causal_mask .| mask)
     end
 
-    # TODO return scores?
-    ω, _ = dot_product_attention(q, k, v; mask, nheads=attn.n_heads)
+    ω, _ = dot_product_attention(
+        q, k, v; mask, nheads=attn.n_heads, fdrop=attn.dropout)
     attn.out(reshape(ω, :, target_length, batch))
 end
 
@@ -64,7 +72,7 @@ Flux.@functor CLIPEncoderLayer
 
 function CLIPEncoderLayer(
     dim::Int; intermediate_size::Int, n_heads::Int, dropout::Real = 0,
-    λ = gelu,
+    λ = quick_gelu,
 )
     self_attn = CLIPAttention(dim; n_heads, dropout)
     layer_norm1 = LayerNorm(dim)
@@ -89,7 +97,6 @@ function (enc::CLIPEncoderLayer)(
     x = enc.layer_norm2(x)
     x = enc.mlp(x)
     residual .+ x
-    # TODO return attention weights?
 end
 
 struct CLIPEncoder{L}
@@ -99,14 +106,13 @@ Flux.@functor CLIPEncoder
 
 function CLIPEncoder(
     dim::Int; intermediate_size::Int, n_heads::Int, num_hidden_layers::Int,
-    dropout::Real = 0,
+    dropout::Real = 0, λ = quick_gelu,
 )
     CLIPEncoder(Chain([
-        CLIPEncoderLayer(dim; intermediate_size, n_heads, dropout)
+        CLIPEncoderLayer(dim; intermediate_size, n_heads, dropout, λ)
         for i in 1:num_hidden_layers]...))
 end
 
-# TODO docs: https://github.com/huggingface/transformers/blob/fb366b9a2a94b38171896f6ba9fb9ae8bffd77af/src/transformers/models/clip/modeling_clip.py#L598
 function (enc::CLIPEncoder)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing
 ) where {
@@ -130,12 +136,12 @@ Flux.@functor CLIPTextTransformer
 function CLIPTextTransformer(;
     vocab_size::Int, embed_dim::Int, max_position_embeddings::Int,
     n_heads::Int, num_hidden_layers::Int, intermediate_size::Int,
-    dropout::Real = 0,
+    dropout::Real = 0, λ = quick_gelu,
 )
     embeddings = CLIPTextEmbeddings(; vocab_size, embed_dim, max_position_embeddings)
     encoder = CLIPEncoder(
         embed_dim; intermediate_size, n_heads,
-        num_hidden_layers, dropout)
+        num_hidden_layers, dropout, λ)
     final_layer_norm = LayerNorm(embed_dim)
     CLIPTextTransformer(embeddings, encoder, final_layer_norm)
 end
@@ -149,9 +155,7 @@ function (transformer::CLIPTextTransformer)(
     x = transformer.embeddings(input_ids)
     causal_mask = make_causal_mask(input_ids; dims=1)
     x = transformer.encoder(x; mask, causal_mask)
-    @show size(x)
     transformer.final_layer_norm(x)
-    # TODO pooled output
 end
 
 # HGF integration.

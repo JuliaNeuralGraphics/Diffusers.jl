@@ -85,28 +85,7 @@ function tk()
 end
 
 """
-- clip text model: https://github.com/huggingface/transformers/blob/fb366b9a2a94b38171896f6ba9fb9ae8bffd77af/src/transformers/models/clip/modeling_clip.py#L769
 - CLIPFeatureExtractor: https://github.com/huggingface/transformers/blob/fb366b9a2a94b38171896f6ba9fb9ae8bffd77af/src/transformers/models/clip/feature_extraction_clip.py#L26
 """
-
-function ttt()
-    transformer = CLIPTextTransformer(
-        "runwayml/stable-diffusion-v1-5";
-        state_file="text_encoder/pytorch_model.bin",
-        config_file="text_encoder/config.json")
-
-    # x = Int32[1; 2;; 5; 6;; 49407; 49408;;]
-    # x = Int32[1; 2;;]
-    # y = transformer(x)
-    # @show size(y)
-    # @show sum(y)
-
-    x = ones(Float32, 768, 2, 1)
-    for i in 1:length(transformer.encoder.layers)
-        @show sum(transformer.encoder.layers[i](x))
-    end
-
-    return
-end
 
 end
