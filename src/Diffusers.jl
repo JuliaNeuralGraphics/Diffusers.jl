@@ -19,21 +19,23 @@ const FluxDeviceAdaptors = (
     Flux.FluxCUDAAdaptor,
     Flux.FluxAMDAdaptor)
 
+include("timestep.jl")
 include("feed_forward.jl")
 include("attention.jl")
 include("transformer.jl")
 include("resnet.jl")
-include("unet_2d.jl")
-include("unet_2d_condition.jl")
-include("timestep.jl")
 
-include("vae.jl")
-include("autoencoder_kl.jl")
+include("unet/blocks.jl")
+include("unet/2d_condition.jl")
 
-include("schedulers/pndm.jl")
+include("autoencoder/blocks.jl")
+include("autoencoder/kl.jl")
+
 include("clip/basic.jl")
 include("clip/tokenizer.jl")
 include("clip/models.jl")
+
+include("schedulers/pndm.jl")
 
 include("load_utils.jl")
 
