@@ -152,12 +152,12 @@ function load_state!(block::ResnetBlock2D, state)
 end
 
 function load_state!(tr::CrossAttnDownBlock2D, state)
-    for k in keys(state)
-        if k == :downsamplers
-            load_state!(getfield(tr, k)[1], getfield(state, k)[1].conv) # inside .conv
-        else
-            load_state!(getfield(tr, k), getfield(state, k)) 
-        end
+    load_state!(tr.downsamplers, state.downsamplers[1].conv)
+    for i in 1:length(tr.resnets)
+        load_state!(tr.resnets[i], state.resnets[i])
+    end
+    for i in 1:length(tr.attentions)
+        load_state!(tr.attentions[i], state.attentions[i])
     end
 end
 
@@ -225,7 +225,9 @@ function load_state!(u::UpBlock2D, state)
 end
 
 function load_state!(d::DownBlock2D, state)
-    load_state!(d.resnets, state.resnets)
+    for i in 1:length(d.resnets)
+        load_state!(d.resnets[i], state.resnets[i])
+    end
     if typeof(d.sampler) <: Downsample2D
         load_state!(d.sampler.conv, state.downsamplers[1].conv)
     end
@@ -238,7 +240,13 @@ end
 
 function load_state!(unet::UNet2DConditionModel, state)
     for k in keys(state)
-        load_state!(getfield(unet, k), getfield(state, k))
+        if k == :down_blocks
+            for i in 1:length(unet.down_blocks)
+                load_state!(unet.down_blocks[i], state.down_blocks[i])
+            end
+        else
+            load_state!(getfield(unet, k), getfield(state, k))
+        end
     end
 end
 
