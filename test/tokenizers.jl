@@ -11,6 +11,5 @@
     outputs = [
         strip(Diffusers.decode(tokenizer, @view(tokens[:, i])))
         for i in 1:size(tokens, 2)]
-    display(outputs); println()
     @test all(inputs .== outputs)
 end

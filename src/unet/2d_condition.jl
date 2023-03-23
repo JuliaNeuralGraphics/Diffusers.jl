@@ -32,6 +32,7 @@ function UNet2DConditionModel(
         CrossAttnUpBlock2D
     ),
     block_out_channels=(320, 640, 1280, 1280),
+    downsample_padding::Int = 1,
 )
     in_channels, out_channels = channels
     conv_in = Conv((3, 3), in_channels => block_out_channels[1]; pad=(1, 1))
@@ -52,13 +53,14 @@ function UNet2DConditionModel(
         down_block = if down_block <: DownBlock2D
             DownBlock2D(
                 input_channel => output_channel,
-                time_emb_channels; n_layers, n_groups,
-                embedding_scale_shift, add_sampler=!is_last)
+                time_emb_channels; n_layers, n_groups, embedding_scale_shift,
+                pad=downsample_padding, add_downsample=!is_last)
         elseif down_block <: CrossAttnDownBlock2D
             CrossAttnDownBlock2D(
                 input_channel => output_channel;
                 time_emb_channels, n_layers, embedding_scale_shift,
-                n_groups, n_heads, context_dim, add_downsample=!is_last)
+                n_groups, n_heads, context_dim,
+                pad=downsample_padding, add_downsample=!is_last)
         end
         push!(down_blocks, down_block)
     end
@@ -82,7 +84,7 @@ function UNet2DConditionModel(
             UpBlock2D(
                 input_channel => output_channel, prev_output_channel,
                 time_emb_channels; n_layers=n_layers + 1, n_groups,
-                add_sampler=!is_last)
+                add_upsample=!is_last)
         else
             CrossAttnUpBlock2D(
                 input_channel => output_channel, prev_output_channel,
@@ -135,4 +137,20 @@ function (unet::UNet2DConditionModel)(
     unet.conv_out(unet.conv_norm_out(x))
 end
 
-# TODO add HGF ctor
+# HGF integration.
+
+function UNet2DConditionModel(model_name::String; state_file::String, config_file::String)
+    state, cfg = load_pretrained_model(model_name; state_file, config_file)
+    unet = UNet2DConditionModel(
+        cfg["in_channels"] => cfg["out_channels"];
+        n_heads=cfg["attention_head_dim"],
+        freq_shift=cfg["freq_shift"],
+        n_layers=cfg["layers_per_block"],
+        n_groups=cfg["norm_num_groups"],
+        context_dim=cfg["cross_attention_dim"],
+        block_out_channels=(cfg["block_out_channels"]...,),
+        downsample_padding=cfg["downsample_padding"],
+    )
+    load_state!(unet, state)
+    unet
+end

@@ -108,7 +108,7 @@ end
 end
 
 @testset "Load SD DownBlock2D" begin
-    d = Diffusers.DownBlock2D(1280 => 1280, 1280; n_layers=2, add_sampler=false)
+    d = Diffusers.DownBlock2D(1280 => 1280, 1280; n_layers=2, add_downsample=false)
     Diffusers.load_state!(d, STATE.down_blocks[4])
 
     # pipe.unet.down_blocks[3](torch.ones(1, 1280, 8, 8),torch.ones(1, 1280))[0].numpy()[0, :6, 0, 0]

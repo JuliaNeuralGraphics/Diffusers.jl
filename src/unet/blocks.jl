@@ -10,7 +10,7 @@ function CrossAttnDownBlock2D(
     n_layers::Int = 1, embedding_scale_shift::Bool = false,
     λ = swish, n_groups::Int = 32, n_heads::Int = 1,
     context_dim::Int = 1280, use_linear_projection::Bool = false,
-    add_downsample::Bool = true, down_padding::Int = 1,
+    add_downsample::Bool = true, pad::Int = 1,
 )
     in_channels, out_channels = channels
     head_dim = out_channels ÷ n_heads
@@ -27,7 +27,7 @@ function CrossAttnDownBlock2D(
         for i in 1:n_layers]...,)
 
     downsamplers = add_downsample ?
-        Conv((3, 3), out_channels => out_channels; stride=2, pad=down_padding) :
+        Conv((3, 3), out_channels => out_channels; stride=2, pad) :
         identity
 
     CrossAttnDownBlock2D(resnets, attentions, downsamplers)
@@ -66,7 +66,7 @@ Flux.@functor DownBlock2D
 function DownBlock2D(
     channels::Pair{Int, Int}, time_emb_channels::Int; n_layers::Int = 1,
     n_groups::Int = 32, embedding_scale_shift::Bool = false,
-    add_sampler::Bool = true, sampler_pad::Int = 1, λ = swish, dropout::Real = 0,
+    add_downsample::Bool = true, pad::Int = 1, λ = swish, dropout::Real = 0,
 )
     in_channels, out_channels = channels
     resnets = [
@@ -74,8 +74,8 @@ function DownBlock2D(
             (i == 1 ? in_channels : out_channels) => out_channels;
             time_emb_channels, embedding_scale_shift, n_groups, dropout, λ)
         for i in 1:n_layers]
-    sampler = add_sampler ?
-        Downsample2D(out_channels => out_channels; use_conv=true, pad=sampler_pad) :
+    sampler = add_downsample ?
+        Downsample2D(out_channels => out_channels; use_conv=true, pad) :
         identity
     DownBlock2D((resnets...,), sampler)
 end
@@ -303,7 +303,7 @@ has_sampler(::UpBlock2D{R, S}) where {R, S} = !(S <: typeof(identity))
 function UpBlock2D(
     channels::Pair{Int, Int}, prev_out_channel::Int, time_emb_channels::Int;
     n_layers::Int = 1, n_groups::Int = 32,
-    add_sampler::Bool = true, sampler_pad::Int = 1, λ = swish,
+    add_upsample::Bool = true, sampler_pad::Int = 1, λ = swish,
     embedding_scale_shift::Bool = false, dropout::Real = 0
 )
     in_channels, out_channels = channels
@@ -317,7 +317,7 @@ function UpBlock2D(
             time_emb_channels, embedding_scale_shift, n_groups, dropout, λ))
     end
 
-    sampler = add_sampler ?
+    sampler = add_upsample ?
         Upsample2D(out_channels=>out_channels; use_conv=true, pad=sampler_pad) :
         identity
     UpBlock2D(Chain(resnets...), sampler)
