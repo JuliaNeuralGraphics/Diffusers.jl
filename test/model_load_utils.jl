@@ -134,8 +134,8 @@ end
     @test y[1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
 end
 
-@testset "Load a SD UNet2DConditionModel with Flux & do forward" begin
-    unet = Diffusers.UNet2DConditionModel(; context_dim=768)
+@testset "Load a SD UNet2DCondition with Flux & do forward" begin
+    unet = Diffusers.UNet2DCondition(; context_dim=768)
     Diffusers.load_state!(unet, STATE)
 
     # y = pipe.unet(torch.ones(1, 4, 64, 64), torch.tensor(981), torch.ones(1, 77, 768)).sample.detach().numpy()[0, 0, 0, :6]

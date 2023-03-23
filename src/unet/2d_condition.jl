@@ -1,4 +1,4 @@
-struct UNet2DConditionModel{CI, S, T, D, M, U, G, CO}
+struct UNet2DCondition{CI, S, T, D, M, U, G, CO}
     conv_in::CI
     sin_embedding::S
     time_embedding::T
@@ -11,7 +11,7 @@ struct UNet2DConditionModel{CI, S, T, D, M, U, G, CO}
     conv_out::CO
 end
 
-function UNet2DConditionModel(
+function UNet2DCondition(
     channels::Pair{Int, Int} = 4 => 4;
     n_layers::Int = 2,
     n_groups::Int = 32,
@@ -98,13 +98,13 @@ function UNet2DConditionModel(
     conv_norm_out = GroupNorm(block_out_channels[end], n_groups, swish)
     conv_out = Conv((3, 3), block_out_channels[end] => out_channels; pad=1)
 
-    UNet2DConditionModel(
+    UNet2DCondition(
         conv_in, sin_embedding, time_embedding,
         (down_blocks...,), mid_block, Chain(up_blocks...),
         conv_norm_out, conv_out)
 end
 
-function (unet::UNet2DConditionModel)(
+function (unet::UNet2DCondition)(
     x::X, timestep::T, text_emb::C
 ) where {
    X <: AbstractArray{Float32, 4},
@@ -139,9 +139,9 @@ end
 
 # HGF integration.
 
-function UNet2DConditionModel(model_name::String; state_file::String, config_file::String)
+function UNet2DCondition(model_name::String; state_file::String, config_file::String)
     state, cfg = load_pretrained_model(model_name; state_file, config_file)
-    unet = UNet2DConditionModel(
+    unet = UNet2DCondition(
         cfg["in_channels"] => cfg["out_channels"];
         n_heads=cfg["attention_head_dim"],
         freq_shift=cfg["freq_shift"],
