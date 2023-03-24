@@ -9,10 +9,11 @@ using Adapt
 using Flux
 using HuggingFaceApi
 using OrderedCollections
+using ImageIO
+using FileIO
+using ImageCore
 
 const Maybe{T} = Union{Nothing, T}
-
-const HGF = Val{:HGF}()
 
 const FluxDeviceAdaptors = (
     Flux.FluxCPUAdaptor,
@@ -95,7 +96,7 @@ end
 
 function mm()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5")
-    @show typeof(sd)
+    sd(["a photo of an astronaut riding a horse on mars"]; width=256, height=256)
     return
 end
 

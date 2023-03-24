@@ -5,7 +5,7 @@ struct StableDiffusion{V, T, K, U, S}
     unet::U
     scheduler::S
 
-    vae_scale_factor::Float32
+    vae_scale_factor::Int
 end
 Flux.@functor StableDiffusion
 
@@ -18,7 +18,7 @@ function StableDiffusion(
     U <: UNet2DCondition,
     S <: PNDMScheduler,
 }
-    vae_scale_factor = 2f0^(length(vae.encoder.down_blocks) - 1)
+    vae_scale_factor = 2^(length(vae.encoder.down_blocks) - 1)
     StableDiffusion(vae, text_encoder, tokenizer, unet, scheduler, vae_scale_factor)
 end
 
@@ -28,13 +28,18 @@ function (sd::StableDiffusion)(
     width::Int, height::Int,
     n_inference_steps::Int = 50,
 )
-    prompt_embeds = _encode_prompt(sd, prompt; n_images_per_prompt)
+    prompt_embeds = _encode_prompt(sd, prompt)
     set_timesteps!(sd.scheduler, n_inference_steps)
-
-    # TODO prepare latents: https://github.com/huggingface/diffusers/blob/c7da8fd23359a22d0df2741688b5b4f33c26df21/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py#L642
-    # TODO denoising loop
-    # TODO decode latents
-    # TODO save image
+    # TODO batch size
+    latents = _prepare_latents(sd; shape=(width, height, 4, 1))
+    # TODO progress bar
+    for t in sd.scheduler.timesteps
+        # TODO `t` must be a vector
+        timestep = Int32[t]
+        noise_pred = sd.unet(latents, timestep, prompt_embeds)
+        latents = step!(sd.scheduler, noise_pred; t, sample=latents)
+    end
+    return _decode_latents(sd, latents)
 end
 
 """
@@ -46,15 +51,30 @@ function _encode_prompt(
 )
     tokens, mask = tokenize(
         sd.tokenizer, prompt; add_start_end=true, context_length)
-
     tokens = Int32.(tokens) # TODO transfer to text encoder device
 
     # TODO do classifier free guidance & negative prompt
     prompt_embeds = sd.text_encoder(tokens; mask)
-    @show size(prompt_embeds)
     # TODO n images per prompt
 
     prompt_embeds
+end
+
+function _prepare_latents(sd::StableDiffusion; shape::NTuple{4, Int})
+    shape = (
+        shape[1] ÷ sd.vae_scale_factor, shape[2] ÷ sd.vae_scale_factor,
+        shape[3], shape[4])
+    # TODO type, device
+    latents = randn(Float32, shape)
+    latents .* sd.scheduler.σ₀
+end
+
+function _decode_latents(sd::StableDiffusion, latents)
+    latents .*= 1f0 / sd.vae.scaling_factor
+    image = decode(sd.vae, latents)
+    image = clamp!(image .* 0.5f0 .+ 0.5f0, 0f0, 1f0)
+    image = permutedims(image, (3, 1, 2, 4)) # TODO transfer to host
+    colorview(RGB{Float32}, image)
 end
 
 # HGF integration.

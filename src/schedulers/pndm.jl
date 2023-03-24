@@ -15,7 +15,7 @@ Base.@kwdef mutable struct PNDMScheduler{
 
     # Adjustable.
 
-    timesteps::T = Int[]
+    timesteps::T = Int[] # TODO should be on the host
     prk_timesteps::Vector{Int} = Int[]
     plms_timesteps::Vector{Int} = Int[]
     _timesteps::Vector{Int}
