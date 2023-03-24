@@ -36,6 +36,7 @@ include("clip/tokenizer.jl")
 include("clip/models.jl")
 
 include("schedulers/pndm.jl")
+include("stable_diffusion.jl")
 
 include("load_utils.jl")
 
@@ -91,5 +92,11 @@ end
 """
 - CLIPFeatureExtractor: https://github.com/huggingface/transformers/blob/fb366b9a2a94b38171896f6ba9fb9ae8bffd77af/src/transformers/models/clip/feature_extraction_clip.py#L26
 """
+
+function mm()
+    sd = StableDiffusion("runwayml/stable-diffusion-v1-5")
+    @show typeof(sd)
+    return
+end
 
 end

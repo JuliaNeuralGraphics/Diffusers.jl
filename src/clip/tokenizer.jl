@@ -49,6 +49,7 @@ function encode(tk::CLIPTokenizer, text::String)
 end
 
 # TODO longet text context length
+# TODO encode in Int32
 function tokenize(
     tk::CLIPTokenizer, texts::Vector{String};
     context_length::Int, truncate::Bool = false,
