@@ -5,6 +5,7 @@ import MLUtils
 import JSON3
 import Pickle
 
+using Statistics
 using Adapt
 using Flux
 using HuggingFaceApi
@@ -19,6 +20,18 @@ const FluxDeviceAdaptors = (
     Flux.FluxCPUAdaptor,
     Flux.FluxCUDAAdaptor,
     Flux.FluxAMDAdaptor)
+
+# TODO
+# This matches what PyTorch is doing.
+# Upstream to Flux.
+# Currently it is doing: (x - μ) / (σ + ϵ)
+# But instead it should: (x - μ) / sqrt(σ² + ϵ)
+function (ln::LayerNorm)(x::AbstractArray)
+    ϵ = convert(float(eltype(x)), ln.ϵ)
+    μ = mean(x; dims=1:length(ln.size))
+    σ² = var(x; dims=1:length(ln.size), mean=μ, corrected=false)
+    ln.diag((x .- μ) ./ sqrt.(σ² .+ ϵ))
+end
 
 include("timestep.jl")
 include("feed_forward.jl")

@@ -49,12 +49,7 @@ function encode(tk::CLIPTokenizer, text::String)
 end
 
 # TODO longet text context length
-# TODO encode in Int32
-# TODO encode in 1-based indexing
-# TODO
-#   what is initialization value? can't be 0, because embedding fails
-#   probably does not matter since it is masked away
-#   but for the sake of it, probably should be <|endoftext|>
+# TODO encode in Int32 from start
 function tokenize(
     tk::CLIPTokenizer, texts::Vector{String};
     context_length::Int, truncate::Bool = false,
@@ -65,8 +60,8 @@ function tokenize(
         encode(tk, add_start_end ? "<|startoftext|> $text <|endoftext|>" : text)
         for text in texts]
 
-    # tokens = zeros(Int64, context_length, n)
-    tokens = fill(1, context_length, n)
+    eof_token = tk.encoder["<|endoftext|>"]
+    tokens = fill(eof_token, context_length, n)
     pad_mask = fill(false, context_length, n)
     for (i, enc) in enumerate(encodings)
         if length(enc) > context_length

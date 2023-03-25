@@ -109,8 +109,8 @@ function set_timesteps!(pndm::PNDMScheduler, n_inference_timesteps::Int)
         empty!(pndm.prk_timesteps)
         pndm.plms_timesteps = reverse(cat(
             pndm._timesteps[1:end - 1],
-            pndm._timesteps[2:end - 1],
-            pndm._timesteps[2:end]; dims=1))
+            pndm._timesteps[end - 1:end - 1],
+            pndm._timesteps[end:end]; dims=1))
     else
         pndm_order = 4
         prk_timesteps =
@@ -274,11 +274,12 @@ julia> pndm = Diffusers.PNDMScheduler(HGF, 4;
 ```
 """
 function PNDMScheduler(model_name::String, nd::Int; config_file::String)
-    config = Diffusers.load_hgf_config(model_name; filename=config_file)
+    cfg = Diffusers.load_hgf_config(model_name; filename=config_file)
     PNDMScheduler(nd;
-        β_schedule=Symbol(config["beta_schedule"]),
-        β_range=Float32(config["beta_start"]) => Float32(config["beta_end"]),
-        n_train_timesteps=config["num_train_timesteps"],
-        skip_prk_steps=config["skip_prk_steps"],
-        α_to_one=config["set_alpha_to_one"])
+        β_schedule=Symbol(cfg["beta_schedule"]),
+        β_range=Float32(cfg["beta_start"]) => Float32(cfg["beta_end"]),
+        n_train_timesteps=cfg["num_train_timesteps"],
+        skip_prk_steps=cfg["skip_prk_steps"],
+        α_to_one=cfg["set_alpha_to_one"],
+        step_offset=cfg["steps_offset"])
 end

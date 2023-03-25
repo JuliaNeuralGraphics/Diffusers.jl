@@ -1,4 +1,4 @@
-quick_gelu(x) = x * sigmoid(1.702f0 * x)
+quick_gelu(x::T) where T = x * sigmoid(T(1.702f0) * x)
 
 struct CLIPMLP{F1, F2}
     fc1::F1
@@ -120,7 +120,7 @@ function (enc::CLIPEncoder)(
     M1 <: AbstractMatrix{Bool},
     M2 <: AbstractMatrix{Bool},
 }
-    for layer in enc.layers
+    for (i, layer) in enumerate(enc.layers)
         x = layer(x; mask, causal_mask)
     end
     x
