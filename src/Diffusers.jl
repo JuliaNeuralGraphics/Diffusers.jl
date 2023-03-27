@@ -109,7 +109,9 @@ end
 
 function mm()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5")
-    sd(["a photo of an astronaut riding a horse on mars"]; width=256, height=256)
+    # TODO fix multiple texts
+    image = sd(["painting of the sun"]; width=512, height=512)
+    save("image.png", rotr90(RGB{N0f8}.(image[:, :, 1])))
     return
 end
 

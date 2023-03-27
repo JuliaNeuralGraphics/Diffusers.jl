@@ -27,18 +27,14 @@ function (sd::StableDiffusion)(
     prompt::Vector{String};
     width::Int, height::Int,
     n_inference_steps::Int = 50,
+    # TODO guidance scale
 )
     prompt_embeds = _encode_prompt(sd, prompt)
-    @show sum(prompt_embeds)
-
     set_timesteps!(sd.scheduler, n_inference_steps)
-    @show sum(sd.scheduler.timesteps)
 
     # TODO batch size
     latents = _prepare_latents(sd; shape=(width, height, 4, 1))
-    @show sum(latents)
-    @show size(latents)
-    return
+
     # TODO progress bar
     for t in sd.scheduler.timesteps
         # TODO `t` must be a vector
