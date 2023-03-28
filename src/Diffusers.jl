@@ -98,10 +98,9 @@ end
 function mm()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5")
     images = sd([
-        "diamond forest",
         "wooden cat",
-    ]; n_images_per_prompt=2)
-    @show size(images)
+        "hand drawn car",
+    ]; n_images_per_prompt=2, n_inference_steps=10)
     for i in 1:size(images, 3)
         save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
     end

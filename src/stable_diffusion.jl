@@ -62,7 +62,7 @@ function _encode_prompt(
     # prompt_embeds = sd.text_encoder(tokens; mask)
     prompt_embeds = sd.text_encoder(tokens) # TODO conditionally use mask
     _, seq_len, batch = size(prompt_embeds)
-    prompt_embeds = repeat(prompt_embeds; inner=(1, n_images_per_prompt, 1))
+    prompt_embeds = repeat(prompt_embeds; outer=(1, n_images_per_prompt, 1))
     prompt_embeds = reshape(prompt_embeds, :, seq_len, batch * n_images_per_prompt)
     # TODO do classifier free guidance & negative prompt
 
