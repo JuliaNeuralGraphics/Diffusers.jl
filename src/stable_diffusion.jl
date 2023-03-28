@@ -22,25 +22,27 @@ function StableDiffusion(
     StableDiffusion(vae, text_encoder, tokenizer, unet, scheduler, vae_scale_factor)
 end
 
-# TODO n_images_per_prompt
 function (sd::StableDiffusion)(
     prompt::Vector{String};
-    width::Int, height::Int,
+    width::Int = 512, height::Int = 512,
     n_inference_steps::Int = 50,
+    n_images_per_prompt::Int = 1,
     # TODO guidance scale
 )
-    prompt_embeds = _encode_prompt(sd, prompt)
+    prompt_embeds = _encode_prompt(sd, prompt; n_images_per_prompt)
     set_timesteps!(sd.scheduler, n_inference_steps)
 
-    # TODO batch size
-    latents = _prepare_latents(sd; shape=(width, height, 4, 1))
+    batch = length(prompt) * n_images_per_prompt
+    latents = _prepare_latents(sd; shape=(width, height, 4, batch))
 
     # TODO progress bar
+    bar = get_pb(length(sd.scheduler.timesteps), "Diffusion process:")
     for t in sd.scheduler.timesteps
         # TODO `t` must be a vector
         timestep = Int32[t]
         noise_pred = sd.unet(latents, timestep, prompt_embeds)
         latents = step!(sd.scheduler, noise_pred; t, sample=latents)
+        next!(bar)
     end
     return _decode_latents(sd, latents)
 end
@@ -51,15 +53,18 @@ Encode prompt into text encoder hidden states.
 function _encode_prompt(
     sd::StableDiffusion, prompt::Vector{String};
     context_length::Int = 77,
+    n_images_per_prompt::Int = 1,
 )
     tokens, mask = tokenize(
         sd.tokenizer, prompt; add_start_end=true, context_length)
     tokens = Int32.(tokens) # TODO transfer to text encoder device
 
-    # TODO do classifier free guidance & negative prompt
     # prompt_embeds = sd.text_encoder(tokens; mask)
     prompt_embeds = sd.text_encoder(tokens) # TODO conditionally use mask
-    # TODO n images per prompt
+    _, seq_len, batch = size(prompt_embeds)
+    prompt_embeds = repeat(prompt_embeds; inner=(1, n_images_per_prompt, 1))
+    prompt_embeds = reshape(prompt_embeds, :, seq_len, batch * n_images_per_prompt)
+    # TODO do classifier free guidance & negative prompt
 
     prompt_embeds
 end

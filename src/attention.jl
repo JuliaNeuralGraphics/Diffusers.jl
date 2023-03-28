@@ -28,6 +28,7 @@ function Attention(dim::Int;
     cross_attention_norm::Bool = false,
     scale::Float32 = 1f0,
     dropout::Real = 0,
+    ϵ::Float32 = 1f-5,
 )
     cross_attention_norm && isnothing(context_dim) && throw(ArgumentError("""
         `context_dim` is `nothing`, but `cross_attention_norm` is `true`.
@@ -54,7 +55,7 @@ function Attention(dim::Int;
     norm = if is_cross_attention
         cross_attention_norm ? LayerNorm(context_dim) : identity
     else
-        isnothing(n_groups) ? identity : GroupNorm(dim, n_groups)
+        isnothing(n_groups) ? identity : GroupNorm(dim, n_groups; ϵ)
     end
 
     Attention(
@@ -77,6 +78,8 @@ function (attn::Attention)(
         attn.to_q(x), attn.to_k(c), attn.to_v(c)
     else
         x = attn.norm(x)
+        # TODO add doc that in this case input should be in (w * h, c, b)
+        x = permutedims(x, (2, 1, 3))
         attn.to_q(x), attn.to_k(x), attn.to_v(x)
     end
 
@@ -84,8 +87,9 @@ function (attn::Attention)(
         reshape(mask, size(mask, 1), 1, 1, size(mask, 2))
     ω, _ = dot_product_attention(q, k, v; mask, nheads=attn.n_heads)
 
-    o = attn.to_out(reshape(ω, :, seq_length, batch))
+    cross_attention(attn) && (ω = reshape(ω, :, seq_length, batch);)
+    o = attn.to_out(ω)
     cross_attention(attn) && return o
 
-    (o .+ residual) ./ attn.scale
+    (permutedims(o, (2, 1, 3)) .+ residual) ./ attn.scale
 end

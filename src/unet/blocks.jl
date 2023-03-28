@@ -175,6 +175,7 @@ function SamplerBlock2D{S}(
             embedding_scale_shift,
             n_groups, dropout, λ)
         for i in 1:n_layers]...)
+
     sampler = add_sampler ?
         S(out_channels; use_conv=true, pad=sampler_pad) : identity
     SamplerBlock2D(resnets, sampler)
@@ -210,6 +211,7 @@ function MidBlock2D(
     λ = swish,
     scale::Float32 = 1f0,
     n_heads::Int = 1,
+    ϵ::Float32 = 1f-6,
 )
     resnets = [ResnetBlock2D(
         channels => channels; time_emb_channels, scale, embedding_scale_shift,
@@ -217,7 +219,7 @@ function MidBlock2D(
         for _ in 1:(n_layers + 1)]
     attentions = add_attention ?
         Chain([
-            Attention(channels; bias=true, n_heads, n_groups, scale)
+            Attention(channels; bias=true, n_heads, n_groups, scale, ϵ)
             for _ in 1:n_layers]...) : nothing
     MidBlock2D(Chain(resnets...), attentions)
 end
@@ -225,12 +227,13 @@ end
 function (mb::MidBlock2D{R, A})(
     x::T, time_embedding::Maybe{E} = nothing,
 ) where {
-    R, A, T <: AbstractArray{Float32, 4},
+    R, A,
+    T <: AbstractArray{Float32, 4},
     E <: AbstractMatrix{Float32},
 }
     x = mb.resnets[1](x, time_embedding)
     for i in 2:length(mb.resnets)
-        if A <: Nothing
+        if !(A <: Nothing)
             width, height, channels, batch = size(x)
             x = mb.attentions[i - 1](reshape(x, :, channels, batch))
             x = reshape(x, width, height, channels, batch)

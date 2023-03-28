@@ -1,17 +1,20 @@
 struct Downsample2D{C}
     conv::C
+    special_padding::Bool
 end
 Flux.@functor Downsample2D
 
 function Downsample2D(
     channels::Pair{Int, Int}; use_conv::Bool = false, pad::Int = 1,
 )
+    special_padding = use_conv && pad == 0
     Downsample2D(use_conv ?
         Conv((3, 3), channels; stride=2, pad) :
-        MeanPool((2, 2)))
+        MeanPool((2, 2)), special_padding)
 end
 
 function (down::Downsample2D)(x::T) where T <: AbstractArray{Float32, 4}
+    down.special_padding && (x = pad_zeros(x, (0, 1, 0, 1, 0, 0, 0, 0));)
     down.conv(x)
 end
 
@@ -66,6 +69,7 @@ function ResnetBlock2D(channels::Pair{Int, Int};
     time_emb_channels::Maybe{Int} = 512,
     use_shortcut::Maybe{Bool} = nothing, conv_out_channels::Maybe{Int} = nothing,
     dropout::Real = 0, λ = swish, scale::Float32 = 1f0,
+    ϵ::Float32 = 1f-6,
 )
     in_channels, out_channels = channels
     n_groups_out = isnothing(n_groups_out) ? n_groups : n_groups_out
@@ -78,14 +82,14 @@ function ResnetBlock2D(channels::Pair{Int, Int};
 
     # NOTE no up/down
     init_proj = Chain(
-        GroupNorm(in_channels, n_groups, λ),
+        GroupNorm(in_channels, n_groups, λ; ϵ),
         Conv((3, 3), channels; pad=1))
     out_proj = Chain(
         x -> λ.(x),
         iszero(dropout) ? identity : Dropout(dropout),
         Conv((3, 3), out_channels => conv_out_channels; pad=1))
 
-    norm = GroupNorm(out_channels, n_groups_out)
+    norm = GroupNorm(out_channels, n_groups_out; ϵ)
     time_emb_proj = isnothing(time_emb_channels) ?
         identity :
         Chain(x -> λ.(x), Dense(time_emb_channels => time_emb_out_channels))

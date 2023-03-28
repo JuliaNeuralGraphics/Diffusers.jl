@@ -27,7 +27,7 @@ function Encoder(
         push!(down_blocks, SamplerBlock2D{Downsample2D}(
             input_channels => output_channels;
             n_groups, n_layers=n_block_layers,
-            add_sampler=!is_final, λ))
+            sampler_pad=0, add_sampler=!is_final, λ))
     end
 
     mid_block = MidBlock2D(
@@ -47,7 +47,8 @@ function (enc::Encoder)(x::T) where T <: AbstractArray{Float32, 4}
     x = enc.conv_in(x)
     x = enc.down_blocks(x)
     x = enc.mid_block(x)
-    enc.conv_out(enc.norm(x))
+    x = enc.norm(x)
+    enc.conv_out(x)
 end
 
 struct Decoder{C1, C2, N, U, M}

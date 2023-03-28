@@ -1,5 +1,4 @@
 module Diffusers
-export HGF
 
 import MLUtils
 import JSON3
@@ -13,6 +12,7 @@ using OrderedCollections
 using ImageIO
 using FileIO
 using ImageCore
+using ProgressMeter
 
 const Maybe{T} = Union{Nothing, T}
 
@@ -20,6 +20,9 @@ const FluxDeviceAdaptors = (
     Flux.FluxCPUAdaptor,
     Flux.FluxCUDAAdaptor,
     Flux.FluxAMDAdaptor)
+
+get_pb(n, desc::String) = Progress(
+    n; desc, dt=1, barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:white)
 
 # TODO
 # This matches what PyTorch is doing.
@@ -31,6 +34,23 @@ function (ln::LayerNorm)(x::AbstractArray)
     μ = mean(x; dims=1:length(ln.size))
     σ² = var(x; dims=1:length(ln.size), mean=μ, corrected=false)
     ln.diag((x .- μ) ./ sqrt.(σ² .+ ϵ))
+end
+
+function (gn::Flux.GroupNorm)(x::AbstractArray)
+    sz = size(x)
+    x2 = reshape(x, sz[1:end-2]..., sz[end-1]÷gn.G, gn.G, sz[end])
+    N = ndims(x2)  # == ndims(x)+1
+    reduce_dims = 1:N-2
+    affine_shape = ntuple(i -> i ∈ (N-1, N-2) ? size(x2, i) : 1, N)
+    μ = mean(x2; dims=reduce_dims)
+    σ² = var(x2; dims=reduce_dims, mean=μ, corrected=false)
+
+    γ = reshape(gn.γ, affine_shape)
+    β = reshape(gn.β, affine_shape)
+
+    scale = γ ./ sqrt.(σ² .+ gn.ϵ)
+    bias = -scale .* μ .+ β
+    return reshape(gn.λ.(scale .* x2 .+ bias), sz)
 end
 
 include("timestep.jl")
@@ -54,18 +74,16 @@ include("stable_diffusion.jl")
 
 include("load_utils.jl")
 
-# >>> vae.encoder(x).sum()
-# tensor(28057.0957, grad_fn=<SumBackward0>)
-
 function main()
     kl = AutoencoderKL(
         "runwayml/stable-diffusion-v1-5";
         state_file="vae/diffusion_pytorch_model.bin",
         config_file="vae/config.json")
-    x = ones(Float32, 256, 256, 3, 1)
 
-    @show sum(kl.encoder(x))
-    @show sum(kl(x))
+    x = ones(Float32, 256, 256, 3, 1)
+    y = kl.encoder(x)
+    @show sum(y)
+    @show size(y)
 
     # y = kl(x)
     # @show size(y)
@@ -74,44 +92,19 @@ function main()
     # y = kl(x; sample_posterior = true)
     # @show size(y)
     # @show sum(y)
-
     return
 end
 
-function tk()
-    input_texts = [
-        "Hello, world!",
-        "There is nothing basically... I mean it quite literally",
-        "I was now on a dark path, unsettled by a future filled with big data and small comprehension.",
-    ]
-    println("Input texts:")
-    display(input_texts); println()
-
-    tokenizer = CLIPTokenizer()
-    tokens, pad_mask = tokenize(tokenizer, input_texts; context_length=32)
-    println("Tokens:")
-    display(tokens); println()
-    display(pad_mask); println()
-    @show size(pad_mask)
-
-    texts = [
-        decode(tokenizer, @view(tokens[:, i]))
-        for i in 1:size(tokens, 2)]
-    println("Decoded texts:")
-    display(texts); println()
-
-    nothing
-end
-
-"""
-- CLIPFeatureExtractor: https://github.com/huggingface/transformers/blob/fb366b9a2a94b38171896f6ba9fb9ae8bffd77af/src/transformers/models/clip/feature_extraction_clip.py#L26
-"""
-
 function mm()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5")
-    # TODO fix multiple texts
-    image = sd(["painting of the sun"]; width=512, height=512)
-    save("image.png", rotr90(RGB{N0f8}.(image[:, :, 1])))
+    images = sd([
+        "diamond forest",
+        "wooden cat",
+    ]; n_images_per_prompt=2)
+    @show size(images)
+    for i in 1:size(images, 3)
+        save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
+    end
     return
 end
 
