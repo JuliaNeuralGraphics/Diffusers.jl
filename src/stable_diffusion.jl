@@ -103,3 +103,11 @@ function StableDiffusion(model_name::String)
         config_file="scheduler/scheduler_config.json")
     StableDiffusion(vae, text_encoder, tokenizer, unet, scheduler)
 end
+
+# Truncate type to improve stacktrace readability.
+# TODO there should be more generic way.
+function Base.show(io::IO, ::Type{<: StableDiffusion{V, T, K, U, S}}) where {
+    V, T, K, U, S,
+}
+    print(io, "StableDiffusion{$(V.name.wrapper){…}, $(T.name.wrapper){…}, $(K.name.wrapper){…}, $(U.name.wrapper){…}, $(S.name.wrapper){…}}")
+end
