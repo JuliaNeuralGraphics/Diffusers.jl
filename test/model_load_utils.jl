@@ -9,6 +9,10 @@
     x = ones(Float32, 320, 1, 2)
     y = attn(x, x)
     @test y[1:5, 1, 1] ≈ target_y atol=1e-5 rtol=1e-5
+
+    attn_f16 = attn |> Flux.f16
+    y16 = attn_f16(Float16.(x), Float16.(x))
+    @test y16[1:5, 1, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD FeedForward" begin
@@ -19,6 +23,10 @@ end
     target_y = [0.5421921, -0.00488963, 0.18569, -0.17563964, -0.0561044]
     y = fwd(ones(Float32, 320, 1, 1))
     @test y[1:5, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+    
+    fwd_16 = fwd |> Flux.f16
+    y = fwd_16(ones(Float16, 320, 1, 1))
+    @test y[1:5, 1, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD BasicTransformerBlock & do a forward" begin
@@ -31,6 +39,10 @@ end
     context = ones(Float32, 768, 77, 1)
     y = tb(x, context)
     @test y[1:5, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    tb_f16 = tb |> Flux.f16
+    y = tb_f16(Float16.(x), Float16.(context))
+    @test y[1:5, 1, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD Transformer2DModel & do a forward"  begin
@@ -43,6 +55,10 @@ end
     x, context = ones(Float32, 64, 64, 320, 1), ones(Float32, 768, 77, 1)
     y = tm(x, context)
     @test y[1, 1, 1:5, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    tm_f16 = tm |> Flux.f16
+    y = tm_f16(Float16.(x), Float16.(context))
+    @test y[1, 1, 1:5, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD FeedForward" begin
@@ -55,6 +71,10 @@ end
     target_y = [1.0409687, 0.36245018, 0.92556036, 0.95282567, 1.5846546]
     y = rs(x, time_embedding)
     @test y[1, 1, 1:5, 1] ≈ target_y atol=1e-3 rtol=1e-3
+    
+    rs_f16 = rs |> Flux.f16
+    y = rs_f16(Float16.(x), Float16.(time_embedding))
+    @test y[1, 1, 1:5, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD CrossAttnDownBlock2D" begin
@@ -67,6 +87,10 @@ end
     target_y = [3.5323777, 4.8788514, 4.8925233, 4.8956304, 4.8956304, 4.8956304]
     y, states = cattn(x, temb, context)
     @test y[1:6, 1, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    cattn_f16 = cattn |> Flux.f16
+    y, states = cattn_f16(Float16.(x), Float16.(temb), Float16.(context))
+    @test y[1:6, 1, 1, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD CrossAttnMidBlock2D" begin
@@ -79,6 +103,10 @@ end
     x, temb, context = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1), ones(Float32, 768, 77, 1)
     y = mid(x, temb, context)
     @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    mid_f16 = mid |> Flux.f16
+    y = mid_f16(Float16.(x), Float16.(temb), Float16.(context))
+    @test y[1, 1, 1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD CrossAttnUpBlock2D" begin
@@ -92,6 +120,12 @@ end
     tl = (x, x, ones(Float32, 16, 16, 640, 1))
     y, _ = u(x, tl, ones(Float32, 1280, 1), ones(Float32, 768, 77, 1))
     @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    u_f16 = u |> Flux.f16
+    x = ones(Float16, 16, 16, 1280, 1)
+    tl = (x, x, ones(Float16, 16, 16, 640, 1))
+    y, _ = u_f16(Float16.(x), tl, ones(Float16, 1280, 1), ones(Float16, 768, 77, 1))
+    @test y[1, 1, 1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD UpBlock2D" begin
@@ -105,6 +139,11 @@ end
     x, temb = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1)
     y, _ = u(x, skip, temb)
     @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+    
+    skip = (ones(Float16, 8, 8, 1280, 1), ones(Float16, 8, 8, 1280, 1), ones(Float16, 8, 8, 1280, 1))
+    u_f16 = u |> Flux.f16
+    y, _ = u_f16(Float16.(x), skip, Float16.(temb))
+    @test y[1, 1, 1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load SD DownBlock2D" begin
@@ -116,6 +155,10 @@ end
     x, temb = ones(Float32, 8, 8, 1280, 1), ones(Float32, 1280, 1)
     y, states = d(x, temb)
     @test y[1, 1, 1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    d_f16 = d |> Flux.f16
+    y, states = d_f16(Float16.(x), Float16.(temb))
+    @test y[1, 1, 1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load a SD TimestepEmbedding with Flux & do forward" begin
@@ -129,9 +172,19 @@ end
     target_y = [7.0012873e-03, -6.0233027e-03, -6.9386559e-03,  5.9670270e-03, 3.6419369e-06, -4.5951810e-03]
     @test y[1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
 
+    t_f16 = t |> Flux.f16
+    y = t_f16(Float16.(x))
+    @test y[1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
+
     target_y = [0.6799572, -0.7984292, 0.57806414, -0.67470044, 0.9926904, 0.8710014]
     y = sin_emb(ones(Int32, 2) .* Int32(981))
     @test y[1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    sin_emb_f16 = sin_emb |> Flux.f16
+    Diffusers.load_state!(t, STATE.time_embedding)
+    y = sin_emb_f16(ones(Int32, 2) .* Int32(981))
+    # FAILS, maybe only convert the final result converted to f16
+    # @test y[1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end
 
 @testset "Load a SD UNet2DCondition with Flux & do forward" begin
@@ -146,4 +199,8 @@ end
 
     y = unet(x, timesteps, text_embedding)
     @test y[1:6, 1, 1, 1] ≈ target_y atol=1e-3 rtol=1e-3
+
+    unet_f16 = unet |> Flux.f16
+    y = unet_f16(Float16.(x), timesteps, Float16.(text_embedding))
+    @test y[1:6, 1, 1, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
 end

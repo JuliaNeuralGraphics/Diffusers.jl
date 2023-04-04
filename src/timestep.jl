@@ -10,7 +10,7 @@ function TimestepEmbedding(in_channels::Int; time_embed_dim::Int)
         Dense(time_embed_dim => time_embed_dim))
 end
 
-function (t::TimestepEmbedding)(x::T) where T <: AbstractArray{Float32, 2}
+function (t::TimestepEmbedding)(x::T) where T <: Union{AbstractArray{Float32, 2}, AbstractArray{Float16, 2}}
     t.linear2(t.linear1(x))
 end
 

@@ -107,9 +107,9 @@ end
 function (unet::UNet2DCondition)(
     x::X, timestep::T, text_emb::C
 ) where {
-   X <: AbstractArray{Float32, 4},
+   X <: Union{AbstractArray{Float32, 4}, AbstractArray{Float16, 4}},
    T <: AbstractVector{Int32},
-   C <: AbstractArray{Float32, 3}
+   C <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}}
 }
     time_emb = unet.sin_embedding(timestep)
     time_emb = unet.time_embedding(time_emb)

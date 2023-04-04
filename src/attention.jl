@@ -66,8 +66,8 @@ end
 function (attn::Attention)(
     x::T, context::Maybe{C} = nothing; mask::Maybe{M} = nothing,
 ) where {
-    T <: AbstractArray{Float32, 3},
-    C <: AbstractArray{Float32, 3},
+    T <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
+    C <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
     M <: AbstractMatrix{Bool},
 }
     residual = x
