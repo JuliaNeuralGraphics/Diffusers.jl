@@ -10,7 +10,7 @@ function CLIPMLP(dims::Pair{Int, Int}, λ = quick_gelu)
     CLIPMLP(Dense(dims, λ), Dense(reverse(dims)))
 end
 
-function (mlp::CLIPMLP)(x::T) where T <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}}
+function (mlp::CLIPMLP)(x::T) where T <: AbstractArray{Real, 3}
     mlp.fc2(mlp.fc1(x))
 end
 
@@ -41,7 +41,7 @@ end
 function (attn::CLIPAttention)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing,
 ) where {
-    T <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
+    T <: AbstractArray{Real, 3},
     M1 <: AbstractMatrix{Bool},
     M2 <: AbstractMatrix{Bool},
 }
@@ -84,7 +84,7 @@ end
 function (enc::CLIPEncoderLayer)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing,
 ) where {
-    T <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
+    T <: AbstractArray{Real, 3},
     M1 <: AbstractMatrix{Bool},
     M2 <: AbstractMatrix{Bool},
 }
@@ -116,11 +116,11 @@ end
 function (enc::CLIPEncoder)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing
 ) where {
-    T <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
+    T <: AbstractArray{Real, 3},
     M1 <: AbstractMatrix{Bool},
     M2 <: AbstractMatrix{Bool},
 }
-    for (i, layer) in enumerate(enc.layers)
+    for layer in enc.layers
         x = layer(x; mask, causal_mask)
     end
     x

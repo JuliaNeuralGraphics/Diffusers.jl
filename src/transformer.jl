@@ -40,8 +40,8 @@ end
 function (block::TransformerBlock)(
     x::T, context::Maybe{C} = nothing; mask::Maybe{M} = nothing,
 ) where {
-    T <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
-    C <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
+    T <: AbstractArray{Real, 3},
+    C <: AbstractArray{Real, 3},
     M <: AbstractMatrix{Bool},
 }
     xn = block.norm_1(x)
@@ -95,8 +95,8 @@ function Transformer2D(;
 end
 
 function (tr::Transformer2D)(x::T, context::Maybe{C} = nothing) where {
-    T <: Union{AbstractArray{Float32, 4}, AbstractArray{Float16, 4}},
-    C <: Union{AbstractArray{Float32, 3}, AbstractArray{Float16, 3}},
+    T <: AbstractArray{Real, 4},
+    C <: AbstractArray{Real, 3},
 }
     width, height, channels, batch = size(x)
     residual = x
