@@ -41,20 +41,16 @@ end
 
 function (gn::Flux.GroupNorm)(x::AbstractArray)
     sz = size(x)
-    x2 = reshape(x, sz[1:end-2]..., sz[end-1]÷gn.G, gn.G, sz[end])
+    x2 = reshape(x, sz[1:end-2]..., sz[end-1] ÷ gn.G, gn.G, sz[end])
     N = ndims(x2) # == ndims(x)+1
     reduce_dims = 1:N-2
     affine_shape = ntuple(i -> i ∈ (N-1, N-2) ? size(x2, i) : 1, N)
 
-    μ, σ² = _normalize(x; dims=reduce_dims)
+    μ, σ² = _normalize(x2; dims=reduce_dims)
     γ = reshape(gn.γ, affine_shape)
     β = reshape(gn.β, affine_shape)
 
     ϵ = convert(float(eltype(x)), gn.ϵ)
-    @show affine_shape
-    @show size(x)
-    @show size(γ)
-    @show size(σ²)
     scale = γ ./ sqrt.(σ² .+ ϵ)
     bias = -scale .* μ .+ β
     return reshape(gn.λ.(scale .* x2 .+ bias), sz)
