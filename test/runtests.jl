@@ -1,3 +1,4 @@
+using AMDGPU
 using Test
 using Diffusers
 using Flux
@@ -16,8 +17,10 @@ include("model_load_utils.jl")
 include("clip.jl")
 include("schedulers.jl")
 
+@info "Flux GPU Backend: $(Flux.GPU_BACKEND)"
+
 @testset verbose=true "Diffusers.jl" begin
-    for fp in (f32, f16), device in (cpu,)
+    for fp in (f32, f16), device in (gpu,)
         @testset verbose=true "Device: $device, Precision: $fp" begin
             @testset "Model layers" begin
                 model_load_testsuite(device, fp)

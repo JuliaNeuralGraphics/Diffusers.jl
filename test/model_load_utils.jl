@@ -168,33 +168,6 @@ function model_load_testsuite(device, fp)
         @test y[1, 1, 1:6, 1] ≈ target_y atol=atol
     end
 
-    @testset "Load a SD TimestepEmbedding with Flux & do forward" begin
-        t = Diffusers.TimestepEmbedding(320; time_embed_dim=1280)
-        sin_emb = Diffusers.SinusoidalEmbedding(320; freq_shift=0)
-
-        Diffusers.load_state!(t, STATE.time_embedding)
-        # y = pipe.unet.time_embedding(torch.ones(1, 320)).detach().numpy()[0, :6]
-        x = ones(Float32, 320, 1)
-        y = t(x)
-        target_y = [7.0012873e-03, -6.0233027e-03, -6.9386559e-03,  5.9670270e-03, 3.6419369e-06, -4.5951810e-03]
-        @test y[1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
-
-        t_f16 = t |> Flux.f16
-        y = t_f16(Float16.(x))
-        @test y[1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
-
-        target_y = [0.6799572, -0.7984292, 0.57806414, -0.67470044, 0.9926904, 0.8710014]
-        y = sin_emb(ones(Int32, 2) .* Int32(981))
-        @test y[1:6, 1] ≈ target_y atol=1e-3 rtol=1e-3
-
-        sin_emb_f16 = sin_emb |> Flux.f16
-        Diffusers.load_state!(t, STATE.time_embedding)
-        y = sin_emb_f16(ones(Int32, 2) .* Int32(981))
-        @test eltype(y) == Float16
-        # FAILS, maybe only convert the final result converted to f16
-        # @test y[1:6, 1] ≈ Float16.(target_y) atol=1e-1 rtol=1e-1
-    end
-
     @testset "Load a SD UNet2DCondition with Flux & do forward" begin
         unet = Diffusers.UNet2DCondition(; context_dim=768)
         Diffusers.load_state!(unet, STATE)

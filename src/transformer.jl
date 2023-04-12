@@ -44,7 +44,6 @@ function (block::TransformerBlock)(
     C <: AbstractArray{<:Real, 3},
     M <: AbstractMatrix{Bool},
 }
-    println()
     xn = block.norm_1(x)
     a1 = block.attention_1(
         xn, block.only_cross_attention ? context : xn; mask)

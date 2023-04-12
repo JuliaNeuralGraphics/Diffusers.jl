@@ -89,11 +89,13 @@ include("stable_diffusion.jl")
 include("load_utils.jl")
 
 function mm()
-    sd = StableDiffusion("runwayml/stable-diffusion-v1-5")
-    images = sd([
-        "metal dog",
-        "tiny tree",
-    ]; n_images_per_prompt=2, n_inference_steps=10)
+    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> cpu
+    @show eltype(sd)
+    @show get_backend(sd)
+
+    images = sd(
+        ["abstract dog", "orange tree"];
+        n_images_per_prompt=1, n_inference_steps=50)
     for i in 1:size(images, 3)
         save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
     end
