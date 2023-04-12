@@ -13,7 +13,7 @@ function Downsample2D(
         MeanPool((2, 2)), special_padding)
 end
 
-function (down::Downsample2D)(x::T) where T <: Union{AbstractArray{Float32, 4}, AbstractArray{Float16, 4}}
+function (down::Downsample2D)(x::T) where T <: AbstractArray{<:Real, 4}
     down.special_padding && (x = pad_zeros(x, (0, 1, 0, 1, 0, 0, 0, 0));)
     down.conv(x)
 end
@@ -40,7 +40,7 @@ end
 
 function (up::Upsample2D{C})(
     x::T; output_size::Maybe{Tuple{Int, Int}} = nothing,
-) where {C, T <: Union{AbstractArray{Float32, 4}, AbstractArray{Float16, 4}}}
+) where {C, T <: AbstractArray{<:Real, 4}}
     C <: ConvTranspose && (x = up.conv(x);)
 
     x = isnothing(output_size) ?

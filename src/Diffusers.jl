@@ -51,6 +51,10 @@ function (gn::Flux.GroupNorm)(x::AbstractArray)
     β = reshape(gn.β, affine_shape)
 
     ϵ = convert(float(eltype(x)), gn.ϵ)
+    @show affine_shape
+    @show size(x)
+    @show size(γ)
+    @show size(σ²)
     scale = γ ./ sqrt.(σ² .+ ϵ)
     bias = -scale .* μ .+ β
     return reshape(gn.λ.(scale .* x2 .+ bias), sz)
@@ -91,8 +95,8 @@ include("load_utils.jl")
 function mm()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5")
     images = sd([
-        "wooden cat",
-        "hand drawn car",
+        "metal dog",
+        "tiny tree",
     ]; n_images_per_prompt=2, n_inference_steps=10)
     for i in 1:size(images, 3)
         save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
