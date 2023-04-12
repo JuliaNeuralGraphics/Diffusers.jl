@@ -1,18 +1,18 @@
 module Diffusers
 
-import MLUtils
 import JSON3
+import MLUtils
 import Pickle
 
-using Statistics
 using Adapt
+using FileIO
 using Flux
 using HuggingFaceApi
-using OrderedCollections
-using ImageIO
-using FileIO
 using ImageCore
+using ImageIO
+using OrderedCollections
 using ProgressMeter
+using Statistics
 
 const Maybe{T} = Union{Nothing, T}
 

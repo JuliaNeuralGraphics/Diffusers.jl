@@ -35,10 +35,8 @@ function (sd::StableDiffusion)(
     batch = length(prompt) * n_images_per_prompt
     latents = _prepare_latents(sd; shape=(width, height, 4, batch))
 
-    # TODO progress bar
     bar = get_pb(length(sd.scheduler.timesteps), "Diffusion process:")
     for t in sd.scheduler.timesteps
-        # TODO `t` must be a vector
         timestep = Int32[t]
         noise_pred = sd.unet(latents, timestep, prompt_embeds)
         latents = step!(sd.scheduler, noise_pred; t, sample=latents)
