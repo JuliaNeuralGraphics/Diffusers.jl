@@ -12,12 +12,18 @@ function (e::Embedding)(ids::T) where T <: AbstractMatrix{<: Integer}
     NNlib.gather(e.weights, ids)
 end
 
-struct CLIPTextEmbeddings{T, P, I}
+struct CLIPTextEmbeddings{T, P, I <: AbstractMatrix{Int32}}
     token_embedding::T
     position_embedding::P
     position_ids::I
 end
 Flux.@functor CLIPTextEmbeddings
+
+# TODO better way to handle fixed int type during f16 conversion
+function CLIPTextEmbeddings(token_embedding, position_embedding, position_ids)
+    pi = eltype(position_ids) == Int32 ? position_ids : Int32.(position_ids)
+    CLIPTextEmbeddings(token_embedding, position_embedding, pi)
+end
 
 Flux.trainable(emb::CLIPTextEmbeddings) = (emb.token_embedding, emb.position_embedding)
 

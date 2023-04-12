@@ -48,7 +48,7 @@ function encode(tk::CLIPTokenizer, text::String)
     bpe_tokens
 end
 
-# TODO longet text context length
+# TODO longest text context length
 # TODO encode in Int32 from start
 function tokenize(
     tk::CLIPTokenizer, texts::Vector{String};
