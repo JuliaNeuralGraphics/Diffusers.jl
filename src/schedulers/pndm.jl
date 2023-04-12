@@ -1,7 +1,6 @@
 Base.@kwdef mutable struct PNDMScheduler{
-    A <: AbstractVector{Float32},
-    T <: AbstractVector{Int},
-    S <: AbstractArray{Float32},
+    A <: AbstractVector{<:Real},
+    S <: AbstractArray{<:Real},
 }
     const α̂::A # Same as α̅ but lives on the current device.
     const α::Vector{Float32}
@@ -15,7 +14,7 @@ Base.@kwdef mutable struct PNDMScheduler{
 
     # Adjustable.
 
-    timesteps::T = Int[] # TODO should be on the host
+    timesteps::Vector{Int} = Int[]
     prk_timesteps::Vector{Int} = Int[]
     plms_timesteps::Vector{Int} = Int[]
     _timesteps::Vector{Int}
@@ -69,14 +68,14 @@ function PNDMScheduler(nd::Int;
         n_train_timesteps)
 end
 
-for T in FluxDeviceAdaptors
+for T in (FluxDeviceAdaptors..., FluxEltypeAdaptors...)
     @eval function Adapt.adapt_storage(to::$(T), pndm::PNDMScheduler)
         PNDMScheduler(
             Adapt.adapt(to, pndm.α̂),
             pndm.α, pndm.α̅, pndm.β,
             pndm.α_final, pndm.σ₀, pndm.skip_prk_steps, pndm.step_offset,
-            Adapt.adapt(to, pndm.timesteps),
-            pndm.prk_timesteps, pndm.plms_timesteps, pndm._timesteps,
+            pndm.timesteps, pndm.prk_timesteps, pndm.plms_timesteps,
+            pndm._timesteps,
 
             Adapt.adapt(to, pndm.x_current),
             Adapt.adapt(to, pndm.sample),
@@ -86,7 +85,7 @@ for T in FluxDeviceAdaptors
     end
 end
 
-Base.ndims(::PNDMScheduler{A, T, S}) where {A, T, S} = ndims(S)
+Base.ndims(::PNDMScheduler{A, S}) where {A, S} = ndims(S)
 
 """
     set_timesteps!(pndm::PNDMScheduler, n_inference_timesteps::Int)
@@ -127,7 +126,7 @@ function set_timesteps!(pndm::PNDMScheduler, n_inference_timesteps::Int)
 
     # Reset counters.
     pndm.x_current = similar(pndm.x_current, ntuple(_ -> 1, Val(ndims(pndm))))
-    fill!(pndm.x_current, 0f0)
+    fill!(pndm.x_current, zero(eltype(pndm.x_current)))
     empty!(pndm.xs)
     pndm.counter = 0
     return
@@ -142,9 +141,7 @@ Predict the sample at the previous `t - 1` timestep by reversing the SDE.
 - `t::Int`: Current discrete timestep in the diffusion chain.
 - `sample`: Sample at the current timestep `t` created by diffusion process.
 """
-function step!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
-    A, T, S,
-}
+function step!(pndm::PNDMScheduler{A, S}, x::S; t::Int, sample::S) where {A, S}
     (pndm.counter < length(pndm.prk_timesteps) && !pndm.skip_prk_steps) ?
         step_prk!(pndm, x; t, sample) :
         step_plms!(pndm, x; t, sample)
@@ -155,25 +152,25 @@ Step function propagating the sample with the Runge-Kutta method.
 RK takes 4 forward passes to approximate the solution
 to the differential equation.
 """
-function step_prk!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
-    A, T, S,
-}
+function step_prk!(pndm::PNDMScheduler{A, S}, x::S; t::Int, sample::S) where {A, S }
+    FP = eltype(S)
+
     ratio = pndm.n_train_timesteps ÷ pndm.n_inference_timesteps
     δt = (pndm.counter % 2 == 0) ? (ratio ÷ 2) : 0
     prev_t, t = t - δt, pndm.prk_timesteps[(pndm.counter ÷ 4) * 4 + 1]
 
     if pndm.counter % 4 == 0
         # Re-assign to get correct shape.
-        pndm.x_current = pndm.x_current .+ (1f0 / 6f0) .* x
+        pndm.x_current = pndm.x_current .+ FP(1f0 / 6f0) .* x
         pndm.sample = sample
         push!(pndm.xs, x)
     elseif (pndm.counter - 1) % 4 == 0
-        pndm.x_current .+= (1f0 / 3f0) .* x
+        pndm.x_current .+= FP(1f0 / 3f0) .* x
     elseif (pndm.counter - 2) % 4 == 0
-        pndm.x_current .+= (1f0 / 3f0) .* x
+        pndm.x_current .+= FP(1f0 / 3f0) .* x
     elseif (pndm.counter - 3) % 4 == 0
-        x = pndm.x_current .+ (1f0 / 6f0) .* x
-        fill!(pndm.x_current, 0f0)
+        x = pndm.x_current .+ FP(1f0 / 6f0) .* x
+        fill!(pndm.x_current, zero(FP))
     end
 
     pndm.counter += 1
@@ -184,14 +181,13 @@ end
 Step function propagating the sample with the linear multi-step method.
 Has one forward pass with multiple times to approximate the solution.
 """
-function step_plms!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where {
-    A, T, S,
-}
+function step_plms!(pndm::PNDMScheduler{A, S}, x::S; t::Int, sample::S) where {A, S}
     !pndm.skip_prk_steps && length(pndm.xs) < 3 && error("""
     Linear multi-step method can only be run after at least 12 steps in PRK
     mode and has sampled `3` forward passes.
     Current amount is `$(length(pndm.xs))`.
     """)
+    FP = eltype(S)
 
     ratio = pndm.n_train_timesteps ÷ pndm.n_inference_timesteps
     prev_t = t - ratio
@@ -209,18 +205,18 @@ function step_plms!(pndm::PNDMScheduler{A, T, S}, x::S; t::Int, sample::S) where
     if length(pndm.xs) == 1 && pndm.counter == 0
         pndm.sample = sample
     elseif length(pndm.xs) == 1 && pndm.counter == 1
-        x = (x .+ pndm.xs[end]) .* 0.5f0
+        x = (x .+ pndm.xs[end]) .* FP(0.5f0)
         sample = pndm.sample
     elseif length(pndm.xs) == 2
-        x = (3f0 .* pndm.xs[end] .- pndm.xs[end - 1]) .* 0.5f0
+        x = (FP(3f0) .* pndm.xs[end] .- pndm.xs[end - 1]) .* FP(0.5f0)
     elseif length(pndm.xs) == 3
-        x = (1f0 / 12f0) .* (
-            23f0 .* pndm.xs[end] .- 16f0 .* pndm.xs[end - 1] .+
-            5f0 .* pndm.xs[end - 2])
+        x = FP(1f0 / 12f0) .* (
+            FP(23f0) .* pndm.xs[end] .- FP(16f0) .* pndm.xs[end - 1] .+
+            FP(5f0) .* pndm.xs[end - 2])
     else
-        x = (1f0 / 24f0) .* (
-            55f0 .* pndm.xs[end] .- 59f0 .* pndm.xs[end - 1] .+
-            37f0 .* pndm.xs[end - 2] .- 9f0 .* pndm.xs[end - 3])
+        x = FP(1f0 / 24f0) .* (
+            FP(55f0) .* pndm.xs[end] .- FP(59f0) .* pndm.xs[end - 1] .+
+            FP(37f0) .* pndm.xs[end - 2] .- FP(9f0) .* pndm.xs[end - 3])
     end
 
     pndm.counter += 1
@@ -234,24 +230,26 @@ end
 - `ξ`: Noise which to apply to `x`.
 - `timesteps`: Vector of discrete timesteps starting at `0`.
 """
-function add_noise(pndm::PNDMScheduler{A, T, S}, x::S, ξ::S, timesteps::T) where {
-    A, T, S,
-}
+function add_noise(
+    pndm::PNDMScheduler{A, S}, x::S, ξ::S, timesteps::Vector{Int},
+) where {A, S}
+    FP = eltype(S)
     αᵗ = reshape(pndm.α̂[timesteps .+ 1], ntuple(_->1, Val(ndims(S) - 1))..., :)
-    α̅, β̅ = sqrt.(αᵗ), sqrt.(1f0 .- αᵗ)
+    α̅, β̅ = sqrt.(αᵗ), sqrt.(FP(1f0) .- αᵗ)
     α̅ .* x .+ β̅ .* ξ
 end
 
 # Equation (9) from paper.
 function previous_sample(
-    pndm::PNDMScheduler{A, T, S}, x::S; t::Int, prev_t::Int, sample::S,
-) where {A, T, S}
+    pndm::PNDMScheduler{A, S}, x::S; t::Int, prev_t::Int, sample::S,
+) where {A, S}
+    FP = eltype(S)
     αₜ₋ᵢ, αₜ = (prev_t ≥ 0 ? pndm.α̅[prev_t + 1] : pndm.α_final), pndm.α̅[t + 1]
     βₜ₋ᵢ, βₜ = (1f0 - αₜ₋ᵢ), (1f0 - αₜ)
 
     γ = √(αₜ₋ᵢ / αₜ)
     ϵ = αₜ * √βₜ₋ᵢ + √(αₜ₋ᵢ * αₜ * βₜ)
-    γ .* sample .- (αₜ₋ᵢ - αₜ) .* x ./ ϵ
+    FP(γ) .* sample .- FP((αₜ₋ᵢ - αₜ) / ϵ) .* x
 end
 
 # HGF integration.

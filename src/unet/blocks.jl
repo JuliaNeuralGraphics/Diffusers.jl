@@ -38,9 +38,9 @@ has_sampler(::CrossAttnDownBlock2D{R, A, D}) where {R, A, D} = !(D <: typeof(ide
 function (cattn::CrossAttnDownBlock2D)(
     x::T, time_emb::Maybe{E} = nothing, context::Maybe{C} = nothing,
 ) where {
-    T <: AbstractArray{Real, 4},
-    E <: AbstractArray{Real, 2},
-    C <: AbstractArray{Real, 3},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
+    C <: AbstractArray{<:Real, 3},
 }
     function _chain(resnets::Tuple, attentions::Tuple, h)
         h = first(resnets)(h, time_emb)
@@ -83,8 +83,8 @@ end
 has_sampler(::DownBlock2D{R, S}) where {R, S} = !(S <: typeof(identity))
 
 function (block::DownBlock2D)(x::T, temb::E) where {
-    T <: AbstractArray{Real, 4},
-    E <: AbstractArray{Real, 2},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
 }
     function _chain(blocks::Tuple, h)
         h = first(blocks)(h, temb)
@@ -137,9 +137,9 @@ end
 function (mid::CrossAttnMidBlock2D)(
     x::T, time_emb::Maybe{E} = nothing, context::Maybe{C} = nothing,
 ) where {
-    T <: AbstractArray{Real, 4},
-    E <: AbstractArray{Real, 2},
-    C <: AbstractArray{Real, 3},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
+    C <: AbstractArray{<:Real, 3},
 }
     x = mid.resnets[1](x, time_emb)
     for (resnet, attn) in zip(mid.resnets[2:end], mid.attentions)
@@ -182,7 +182,7 @@ function SamplerBlock2D{S}(
     SamplerBlock2D(resnets, sampler)
 end
 
-function (block::SamplerBlock2D)(x::T) where T <: AbstractArray{Real, 4}
+function (block::SamplerBlock2D)(x::T) where T <: AbstractArray{<:Real, 4}
     for rn in block.resnets
         x = rn(x, nothing)
     end
@@ -229,8 +229,8 @@ function (mb::MidBlock2D{R, A})(
     x::T, time_embedding::Maybe{E} = nothing,
 ) where {
     R, A,
-    T <: AbstractArray{Real, 4},
-    E <: AbstractMatrix{Real},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractMatrix{<:Real},
 }
     x = mb.resnets[1](x, time_embedding)
     for i in 2:length(mb.resnets)
@@ -283,9 +283,9 @@ end
 function (block::CrossAttnUpBlock2D)(
     x::T, skips, temb::Maybe{E} = nothing, context::Maybe{C} = nothing
 ) where {
-    T <: AbstractArray{Real, 4},
-    E <: AbstractArray{Real, 2},
-    C <: AbstractArray{Real, 3},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
+    C <: AbstractArray{<:Real, 3},
 }
     for (rn, attn) in zip(block.resnets, block.attentions)
         skip, skips = first(skips), Base.tail(skips)
@@ -328,8 +328,8 @@ function UpBlock2D(
 end
 
 function (block::UpBlock2D)(x::T, skips, temb::E) where {
-    T <: AbstractArray{Real, 4},
-    E <: AbstractArray{Real, 2},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
 }
     for block in block.resnets
         skip, skips = first(skips), Base.tail(skips)

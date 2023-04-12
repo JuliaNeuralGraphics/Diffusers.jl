@@ -10,7 +10,7 @@ function TimestepEmbedding(in_channels::Int; time_embed_dim::Int)
         Dense(time_embed_dim => time_embed_dim))
 end
 
-function (t::TimestepEmbedding)(x::T) where T <: AbstractMatrix{Real}
+function (t::TimestepEmbedding)(x::T) where T <: AbstractMatrix{<:Real}
     t.linear2(t.linear1(x))
 end
 
@@ -31,7 +31,10 @@ function SinusoidalEmbedding(
     SinusoidalEmbedding(reshape(emb, :, 1))
 end
 
-function (emb::SinusoidalEmbedding)(timesteps::T) where T <: AbstractVector{Int32}
+function (emb::SinusoidalEmbedding{E})(timesteps::T) where {
+    E <: AbstractMatrix,
+    T <: AbstractVector{Int32},
+}
     emb = emb.emb .* reshape(timesteps, 1, :)
     cat(cos.(emb), sin.(emb); dims=1)
 end

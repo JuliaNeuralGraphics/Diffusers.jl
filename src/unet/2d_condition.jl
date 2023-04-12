@@ -10,6 +10,7 @@ struct UNet2DCondition{CI, S, T, D, M, U, G, CO}
     conv_norm_out::G
     conv_out::CO
 end
+Flux.@functor UNet2DCondition
 
 function UNet2DCondition(
     channels::Pair{Int, Int} = 4 => 4;
@@ -107,9 +108,9 @@ end
 function (unet::UNet2DCondition)(
     x::X, timestep::T, text_emb::C
 ) where {
-   X <: AbstractArray{Float32, 4},
+   X <: AbstractArray{<:Real, 4},
    T <: AbstractVector{Int32},
-   C <: AbstractArray{Real, 3},
+   C <: AbstractArray{<:Real, 3},
 }
     time_emb = unet.sin_embedding(timestep)
     time_emb = unet.time_embedding(time_emb)

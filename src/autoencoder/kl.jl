@@ -30,20 +30,20 @@ function AutoencoderKL(
     AutoencoderKL(encoder, decoder, quant_conv, post_quant_conv, scaling_factor)
 end
 
-function encode(kl::AutoencoderKL, x::T) where T <: AbstractArray{Real, 4}
+function encode(kl::AutoencoderKL, x::T) where T <: AbstractArray{<:Real, 4}
     h = kl.encoder(x)
     moments = kl.quant_conv(h)
     DiagonalGaussian(moments)
 end
 
-function decode(kl::AutoencoderKL, z::T) where T <: AbstractArray{Real, 4}
+function decode(kl::AutoencoderKL, z::T) where T <: AbstractArray{<:Real, 4}
     h = kl.post_quant_conv(z)
     kl.decoder(h)
 end
 
 function (kl::AutoencoderKL)(
     x::T; sample_posterior::Bool = false,
-) where T <: AbstractArray{Real, 4}
+) where T <: AbstractArray{<:Real, 4}
     posterior = encode(kl, x)
     if sample_posterior
         z = sample(posterior)
