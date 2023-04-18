@@ -133,6 +133,10 @@ struct CLIPTextTransformer{B, E, L}
 end
 Flux.@functor CLIPTextTransformer
 
+function get_backend(tr::CLIPTextTransformer)
+    typeof(tr.embeddings.token_embedding.weights) <: Array ? cpu : gpu
+end
+
 function CLIPTextTransformer(;
     vocab_size::Int, embed_dim::Int, max_position_embeddings::Int,
     n_heads::Int, num_hidden_layers::Int, intermediate_size::Int,
@@ -146,16 +150,13 @@ function CLIPTextTransformer(;
     CLIPTextTransformer(embeddings, encoder, final_layer_norm)
 end
 
-function (transformer::CLIPTextTransformer)(
-    input_ids::I; mask::Maybe{M} = nothing,
-) where {
-    I <: AbstractMatrix{Int32},
-    M <: AbstractMatrix{Bool},
+function (tr::CLIPTextTransformer)(input_ids::I; mask::Maybe{M} = nothing) where {
+    I <: AbstractMatrix{Int32}, M <: AbstractMatrix{Bool},
 }
-    x = transformer.embeddings(input_ids)
-    causal_mask = make_causal_mask(input_ids; dims=1)
-    x = transformer.encoder(x; mask, causal_mask)
-    transformer.final_layer_norm(x)
+    x = tr.embeddings(input_ids)
+    causal_mask = make_causal_mask(input_ids; dims=1) |> get_backend(tr)
+    x = tr.encoder(x; mask, causal_mask)
+    tr.final_layer_norm(x)
 end
 
 # HGF integration.

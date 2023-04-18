@@ -23,7 +23,7 @@ function model_load_testsuite(device, fp)
 
         # pipe.unet.down_blocks[0].attentions[0].transformer_blocks[0].ff(torch.ones(1, 2, 320))[0, 0, :5].detach().numpy()
         target_y = [0.5421921, -0.00488963, 0.18569, -0.17563964, -0.0561044] |> fp
-        x = ones(Float32, 320, 1, 1) |> fp
+        x = ones(Float32, 320, 1, 1) |> fp |> device
         y = m(x) |> cpu
 
         @test eltype(x) == eltype(y)

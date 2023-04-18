@@ -45,13 +45,18 @@ function (block::TransformerBlock)(
     M <: AbstractMatrix{Bool},
 }
     xn = block.norm_1(x)
+    @assert !any(isnan.(xn))
     a1 = block.attention_1(
         xn, block.only_cross_attention ? context : xn; mask)
+    @assert !any(isnan.(a1))
     x = a1 .+ x
+    @assert !any(isnan.(x))
 
     if block.attention_2 ≢ nothing
         a2 = block.attention_2(block.norm_2(x), context; mask)
+        @assert !any(isnan.(a2))
         x = a2 .+ x
+        @assert !any(isnan.(x))
     end
 
     block.fwd(block.norm_3(x)) .+ x

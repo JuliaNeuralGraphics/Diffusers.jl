@@ -82,14 +82,20 @@ function (attn::Attention)(
         x = permutedims(x, (2, 1, 3))
         attn.to_q(x), attn.to_k(x), attn.to_v(x)
     end
+    @assert !any(isnan.(q))
+    @assert !any(isnan.(k))
+    @assert !any(isnan.(v))
 
     mask = isnothing(mask) ? nothing :
         reshape(mask, size(mask, 1), 1, 1, size(mask, 2))
     ω, _ = dot_product_attention(q, k, v; mask, nheads=attn.n_heads)
+    @assert !any(isnan.(ω))
 
     cross_attention(attn) && (ω = reshape(ω, :, seq_length, batch);)
     o = attn.to_out(ω)
+    @assert !any(isnan.(o))
     cross_attention(attn) && return o
 
-    (permutedims(o, (2, 1, 3)) .+ residual) ./ attn.scale
+    FP = eltype(x)
+    (permutedims(o, (2, 1, 3)) .+ residual) .* FP(inv(attn.scale))
 end
