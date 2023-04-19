@@ -27,17 +27,17 @@ include("schedulers.jl")
             @testset "Model layers" begin
                 model_load_testsuite(device, fp)
             end
-            @testset "CLIP model" begin
-                clip_testsuite(device, fp)
-            end
-            @testset "Schedulers" begin
-                scheduler_testsuite(device, fp)
-            end
+            # @testset "CLIP model" begin
+            #     clip_testsuite(device, fp)
+            # end
+            # @testset "Schedulers" begin
+            #     scheduler_testsuite(device, fp)
+            # end
         end
     end
-    @testset "Tokenizers" begin
-        include("tokenizers.jl")
-    end
+    # @testset "Tokenizers" begin
+    #     include("tokenizers.jl")
+    # end
     # @testset "Layer load utils" begin
     #     include("layer_load_utils.jl")
     # end

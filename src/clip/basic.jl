@@ -1,17 +1,3 @@
-struct Embedding{E}
-    weights::E
-end
-Flux.@functor Embedding
-
-function Embedding(; embed_dim::Int, vocab_size::Int)
-    Embedding(randn(Float32, embed_dim, vocab_size))
-end
-
-# ids are 1-based
-function (e::Embedding)(ids::T) where T <: AbstractMatrix{<: Integer}
-    NNlib.gather(e.weights, ids)
-end
-
 struct CLIPTextEmbeddings{T, P, I <: AbstractMatrix{Int32}}
     token_embedding::T
     position_embedding::P
@@ -31,8 +17,8 @@ function CLIPTextEmbeddings(;
     vocab_size::Int, embed_dim::Int, max_position_embeddings::Int,
 )
     CLIPTextEmbeddings(
-        Embedding(; embed_dim, vocab_size),
-        Embedding(; embed_dim, vocab_size=max_position_embeddings),
+        Embedding(vocab_size => embed_dim),
+        Embedding(max_position_embeddings => embed_dim),
         reshape(collect(UnitRange{Int32}(1, max_position_embeddings)), :, 1))
 end
 

@@ -13,6 +13,8 @@ using ImageIO
 using OrderedCollections
 using ProgressMeter
 using Statistics
+using AMDGPU
+using KernelAbstractions
 
 const Maybe{T} = Union{Nothing, T}
 
