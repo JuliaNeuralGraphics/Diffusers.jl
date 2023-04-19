@@ -11,7 +11,7 @@ function model_load_testsuite(device, fp)
         x = ones(Float32, 320, 1, 2) |> fp |> device
         y = m(x, x) |> cpu
 
-        println("Attention: ", sum(y))
+        println("Attention: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         @test y[1:5, 1, 1] ≈ target_y atol=atol
@@ -27,7 +27,7 @@ function model_load_testsuite(device, fp)
         x = ones(Float32, 320, 1, 1) |> fp |> device
         y = m(x) |> cpu
 
-        println("FeedForward: ", sum(y))
+        println("FeedForward: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         @test cpu(y)[1:5, 1, 1] ≈ target_y atol=atol
@@ -44,7 +44,7 @@ function model_load_testsuite(device, fp)
         context = ones(Float32, 768, 77, 1) |> fp |> device
         y = m(x, context) |> cpu
 
-        println("TransformerBlock: ", sum(y))
+        println("TransformerBlock: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         @test y[1:5, 1, 1] ≈ target_y atol=atol
@@ -61,7 +61,7 @@ function model_load_testsuite(device, fp)
         context = ones(Float32, 768, 77, 1) |> fp |> device
         y = m(x, context) |> cpu
 
-        println("Transformer2D: ", sum(y))
+        println("Transformer2D: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         @test y[1, 1, 1:5, 1] ≈ target_y atol=atol
@@ -79,7 +79,7 @@ function model_load_testsuite(device, fp)
         target_y = [1.0409687, 0.36245018, 0.92556036, 0.95282567, 1.5846546] |> fp
         y = m(x, time_embedding) |> cpu
 
-        println("ResnetBlock2D: ", sum(y))
+        println("ResnetBlock2D: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         @test y[1, 1, 1:5, 1] ≈ target_y atol=atol
@@ -98,7 +98,7 @@ function model_load_testsuite(device, fp)
         target_y = [3.5323777, 4.8788514, 4.8925233, 4.8956304, 4.8956304, 4.8956304] |> fp
         y = m(x, temb, context)[1] |> cpu
 
-        println("CrossAttnDownBlock2D: ", sum(y))
+        println("CrossAttnDownBlock2D: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         # @test y[1:6, 1, 1, 1] ≈ target_y atol=atol
@@ -117,7 +117,7 @@ function model_load_testsuite(device, fp)
         context = ones(Float32, 768, 77, 1) |> fp |> device
         y = m(x, temb, context) |> cpu
 
-        println("CrossAttnMidBlock2D: ", sum(y))
+        println("CrossAttnMidBlock2D: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         # @test y[1, 1, 1:6, 1] ≈ target_y atol=atol
@@ -137,7 +137,7 @@ function model_load_testsuite(device, fp)
         context = ones(Float32, 768, 77, 1) |> fp |> device
         y = m(x, skips, temb, context)[1] |> cpu
 
-        println("CrossAttnUpBlock2D: ", sum(y))
+        println("CrossAttnUpBlock2D: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         # @test y[1, 1, 1:6, 1] ≈ target_y atol=atol
@@ -155,7 +155,7 @@ function model_load_testsuite(device, fp)
         temb = ones(Float32, 1280, 1) |> fp |> device
         y = m(x, skip, temb)[1] |> cpu
 
-        println("UpBlock2D: ", sum(y))
+        println("UpBlock2D: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         # @test y[1, 1, 1:6, 1] ≈ target_y atol=atol
@@ -172,7 +172,7 @@ function model_load_testsuite(device, fp)
         temb = ones(Float32, 1280, 1) |> fp |> device
         y = m(x, temb)[1] |> cpu
 
-        println("DownBlock2D: ", sum(y))
+        println("DownBlock2D: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         # @test y[1, 1, 1:6, 1] ≈ target_y atol=atol
@@ -191,7 +191,7 @@ function model_load_testsuite(device, fp)
 
         y = m(x, timesteps, text_embedding) |> cpu
 
-        println("UNet2DCondition: ", sum(y))
+        println("UNet2DCondition: ", sum(Float32.(y)))
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
         # @test y[1:6, 1, 1, 1] ≈ target_y atol=atol
