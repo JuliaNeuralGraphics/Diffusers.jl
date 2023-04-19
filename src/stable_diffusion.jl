@@ -36,20 +36,21 @@ function (sd::StableDiffusion)(
     # TODO guidance scale
 )
     prompt_embeds = _encode_prompt(sd, prompt; n_images_per_prompt)
-    @show typeof(prompt_embeds)
+    GC.gc()
     set_timesteps!(sd.scheduler, n_inference_steps)
+    GC.gc()
 
     batch = length(prompt) * n_images_per_prompt
     latents = _prepare_latents(sd; shape=(width, height, 4, batch))
-    @show typeof(latents)
+    GC.gc()
 
     bar = get_pb(length(sd.scheduler.timesteps), "Diffusion process:")
     for t in sd.scheduler.timesteps
-        timestep = Int32[t]
+        timestep = Int32[t] |> get_backend(sd)
         noise_pred = sd.unet(latents, timestep, prompt_embeds)
-        @show typeof(noise_pred)
+        GC.gc()
         latents = step!(sd.scheduler, noise_pred; t, sample=latents)
-        @show typeof(latents)
+        GC.gc()
         next!(bar)
     end
     return _decode_latents(sd, latents)
@@ -80,8 +81,8 @@ end
 
 function _prepare_latents(sd::StableDiffusion; shape::NTuple{4, Int})
     shape = (
-        shape[1] ÷ sd.vae_scale_factor, shape[2] ÷ sd.vae_scale_factor,
-        shape[3], shape[4])
+        shape[1] ÷ sd.vae_scale_factor,
+        shape[2] ÷ sd.vae_scale_factor, shape[3], shape[4])
     FP = eltype(sd)
     latents = randn(FP, shape) |> get_backend(sd)
     isone(sd.scheduler.σ₀) || return latents
@@ -91,9 +92,7 @@ end
 function _decode_latents(sd::StableDiffusion, latents)
     FP = eltype(sd)
     latents .*= FP(1f0 / sd.vae.scaling_factor)
-    @show typeof(latents)
     image = decode(sd.vae, latents)
-    @show typeof(image)
     host_image = image |> cpu
     host_image = clamp!(Float32.(host_image) .* 0.5f0 .+ 0.5f0, 0f0, 1f0)
     host_image = permutedims(host_image, (3, 1, 2, 4))

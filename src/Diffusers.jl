@@ -13,8 +13,15 @@ using ImageIO
 using OrderedCollections
 using ProgressMeter
 using Statistics
+
 using AMDGPU
 using KernelAbstractions
+const Backend = ROCBackend()
+
+function sync_free!(args...)
+    KernelAbstractions.synchronize(Backend)
+    KernelAbstractions.unsafe_free!.(args)
+end
 
 const Maybe{T} = Union{Nothing, T}
 
@@ -38,7 +45,9 @@ get_pb(n, desc::String) = Progress(
 function (ln::LayerNorm)(x::AbstractArray)
     ϵ = convert(float(eltype(x)), ln.ϵ)
     μ, σ² = _normalize(x; dims=1:length(ln.size))
-    ln.diag((x .- μ) ./ sqrt.(σ² .+ ϵ))
+    y = ln.diag((x .- μ) ./ sqrt.(σ² .+ ϵ))
+    sync_free!(μ, σ²)
+    return y
 end
 
 function (gn::Flux.GroupNorm)(x::AbstractArray)
@@ -55,12 +64,17 @@ function (gn::Flux.GroupNorm)(x::AbstractArray)
     ϵ = convert(float(eltype(x)), gn.ϵ)
     scale = γ ./ sqrt.(σ² .+ ϵ)
     bias = -scale .* μ .+ β
+
+    sync_free!(μ, σ²)
     return reshape(gn.λ.(scale .* x2 .+ bias), sz)
 end
 
 function _normalize(x::AbstractArray{Float16}; dims)
-    μ, σ² = _normalize(Float32.(x); dims)
-    Float16.(μ), Float16.(σ²)
+    x_fp32 = Float32.(x)
+    μ, σ² = _normalize(x_fp32; dims)
+    m, v = Float16.(μ), Float16.(σ²)
+    sync_free!(x_fp32, μ, σ²)
+    return m, v
 end
 
 function _normalize(x; dims)
@@ -91,13 +105,11 @@ include("stable_diffusion.jl")
 include("load_utils.jl")
 
 function mm()
-    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> cpu
-    @show eltype(sd)
-    @show get_backend(sd)
+    println("Running StableDiffusion on $(Backend)")
+    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
 
-    images = sd(
-        ["abstract dog", "orange tree"];
-        n_images_per_prompt=1, n_inference_steps=50)
+    prompts = ["painted car"]
+    images = sd(prompts; n_images_per_prompt=1, n_inference_steps=10)
     for i in 1:size(images, 3)
         save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
     end

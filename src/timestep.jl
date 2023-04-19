@@ -11,7 +11,10 @@ function TimestepEmbedding(in_channels::Int; time_embed_dim::Int)
 end
 
 function (t::TimestepEmbedding)(x::T) where T <: AbstractMatrix{<:Real}
-    t.linear2(t.linear1(x))
+    tmp = t.linear1(x)
+    y = t.linear2(tmp)
+    sync_free!(tmp)
+    return y
 end
 
 struct SinusoidalEmbedding{E}
@@ -36,5 +39,10 @@ function (emb::SinusoidalEmbedding{E})(timesteps::T) where {
     T <: AbstractVector{Int32},
 }
     emb = emb.emb .* reshape(timesteps, 1, :)
-    cat(cos.(emb), sin.(emb); dims=1)
+    cos_emb, sin_emb = cos.(emb), sin.(emb)
+    sync_free!(emb)
+
+    y = cat(cos_emb, sin_emb; dims=1)
+    sync_free!(cos_emb, sin_emb)
+    return y
 end

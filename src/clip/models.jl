@@ -134,7 +134,7 @@ end
 Flux.@functor CLIPTextTransformer
 
 function get_backend(tr::CLIPTextTransformer)
-    typeof(tr.embeddings.token_embedding.weights) <: Array ? cpu : gpu
+    typeof(tr.embeddings.token_embedding.weight) <: Array ? cpu : gpu
 end
 
 function CLIPTextTransformer(;

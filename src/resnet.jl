@@ -103,8 +103,7 @@ function ResnetBlock2D(channels::Pair{Int, Int};
 end
 
 function (block::ResnetBlock2D)(x::T, time_embedding::Maybe{E}) where {
-    T <: AbstractArray{<:Real, 4},
-    E <: AbstractMatrix{<:Real},
+    T <: AbstractArray{<:Real, 4}, E <: AbstractMatrix{<:Real},
 }
     skip, x = x, block.init_proj(x)
 
@@ -120,7 +119,8 @@ function (block::ResnetBlock2D)(x::T, time_embedding::Maybe{E}) where {
     if time_embedding ≢ nothing && block.embedding_scale_shift
         scale, shift = MLUtils.chunk(time_embedding, 2; dims=3)
         x = x .* (one(TI) .+ scale) .+ shift
+        sync_free!(scale, shift)
     end
 
-    (block.out_proj(x) .+ block.conv_shortcut(skip)) ./ TI(block.scale)
+    block.out_proj(x) .+ block.conv_shortcut(skip) .* TI(inv(block.scale))
 end

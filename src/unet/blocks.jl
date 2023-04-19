@@ -43,8 +43,9 @@ function (cattn::CrossAttnDownBlock2D)(
     C <: AbstractArray{<:Real, 3},
 }
     function _chain(resnets::Tuple, attentions::Tuple, h)
-        h = first(resnets)(h, time_emb)
-        h = first(attentions)(h, context)
+        tmp = first(resnets)(h, time_emb)
+        h = first(attentions)(tmp, context)
+        sync_free!(tmp)
         (h, _chain(Base.tail(resnets), Base.tail(attentions), h)...)
     end
     _chain(::Tuple{}, ::Tuple{}, _) = ()
@@ -143,8 +144,9 @@ function (mid::CrossAttnMidBlock2D)(
 }
     x = mid.resnets[1](x, time_emb)
     for (resnet, attn) in zip(mid.resnets[2:end], mid.attentions)
-        x = attn(x, context)
-        x = resnet(x, time_emb)
+        tmp = attn(x, context)
+        x = resnet(tmp, time_emb)
+        sync_free!(tmp)
     end
     x
 end
@@ -333,7 +335,11 @@ function (block::UpBlock2D)(x::T, skips, temb::E) where {
 }
     for block in block.resnets
         skip, skips = first(skips), Base.tail(skips)
-        x = block(cat(x, skip; dims=3), temb)
+        tmp = cat(x, skip; dims=3)
+        x = block(tmp, temb)
+        sync_free!(tmp)
     end
-    block.sampler(x), skips
+    y = block.sampler(x)
+    sync_free!(x)
+    y, skips
 end

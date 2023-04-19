@@ -1,6 +1,9 @@
 function geglu(x)
     h, gate = MLUtils.chunk(x, 2; dims=1)
-    h .* gelu(gate)
+    gate = gelu(gate)
+    y = h .* gate
+    sync_free!(gate)
+    return y
 end
 
 struct FeedForward{F}

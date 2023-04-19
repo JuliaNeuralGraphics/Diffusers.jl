@@ -13,7 +13,7 @@ function model_load_testsuite(device, fp)
 
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
-        # @test y[1:5, 1, 1] ≈ target_y atol=atol
+        @test y[1:5, 1, 1] ≈ target_y atol=atol
     end
 
     @testset "FeedForward" begin
@@ -28,7 +28,7 @@ function model_load_testsuite(device, fp)
 
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
-        # @test cpu(y)[1:5, 1, 1] ≈ target_y atol=atol
+        @test cpu(y)[1:5, 1, 1] ≈ target_y atol=atol
     end
 
     @testset "TransformerBlock" begin
@@ -44,7 +44,7 @@ function model_load_testsuite(device, fp)
 
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
-        # @test y[1:5, 1, 1] ≈ target_y atol=atol
+        @test y[1:5, 1, 1] ≈ target_y atol=atol
     end
 
     @testset "Load SD Transformer2DModel & do a forward"  begin
@@ -60,7 +60,7 @@ function model_load_testsuite(device, fp)
 
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
-        # @test y[1, 1, 1:5, 1] ≈ target_y atol=atol
+        @test y[1, 1, 1:5, 1] ≈ target_y atol=atol
     end
 
     @testset "Load SD ResnetBlock2D" begin
@@ -77,7 +77,7 @@ function model_load_testsuite(device, fp)
 
         @test eltype(x) == eltype(y)
         @test !any(isnan.(y))
-        # @test y[1, 1, 1:5, 1] ≈ target_y atol=atol
+        @test y[1, 1, 1:5, 1] ≈ target_y atol=atol
     end
 
     @testset "Load SD CrossAttnDownBlock2D" begin
@@ -168,21 +168,21 @@ function model_load_testsuite(device, fp)
         # @test y[1, 1, 1:6, 1] ≈ target_y atol=atol
     end
 
-    # @testset "Load a SD UNet2DCondition with Flux & do forward" begin
-    #     unet = Diffusers.UNet2DCondition(; context_dim=768)
-    #     Diffusers.load_state!(unet, STATE)
-    #     m = unet |> fp |> device
+    @testset "Load a SD UNet2DCondition with Flux & do forward" begin
+        unet = Diffusers.UNet2DCondition(; context_dim=768)
+        Diffusers.load_state!(unet, STATE)
+        m = unet |> fp |> device
 
-    #     # y = pipe.unet(torch.ones(1, 4, 64, 64), torch.tensor(981), torch.ones(1, 77, 768)).sample.detach().numpy()[0, 0, 0, :6]
-    #     target_y = [0.22149813, 0.16261391, 0.13246158, 0.11514825, 0.11287624, 0.11176358] |> fp
-    #     x = ones(Float32, 64, 64, 4, 1) |> fp |> device
-    #     timesteps = (ones(Int32, 1) * Int32(981)) |> device
-    #     text_embedding = ones(Float32, 768, 77, 1) |> fp |> device
+        # y = pipe.unet(torch.ones(1, 4, 64, 64), torch.tensor(981), torch.ones(1, 77, 768)).sample.detach().numpy()[0, 0, 0, :6]
+        target_y = [0.22149813, 0.16261391, 0.13246158, 0.11514825, 0.11287624, 0.11176358] |> fp
+        x = ones(Float32, 64, 64, 4, 1) |> fp |> device
+        timesteps = (ones(Int32, 1) * Int32(981)) |> device
+        text_embedding = ones(Float32, 768, 77, 1) |> fp |> device
 
-    #     y = m(x, timesteps, text_embedding) |> cpu
+        y = m(x, timesteps, text_embedding) |> cpu
 
-    #     @test eltype(x) == eltype(y)
-    #     @test !any(isnan.(y))
-    #     @test y[1:6, 1, 1, 1] ≈ target_y atol=atol
-    # end
+        @test eltype(x) == eltype(y)
+        @test !any(isnan.(y))
+        # @test y[1:6, 1, 1, 1] ≈ target_y atol=atol
+    end
 end
