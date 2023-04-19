@@ -109,7 +109,7 @@ function mm()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
 
     prompts = ["painted car"]
-    images = sd(prompts; n_images_per_prompt=1, n_inference_steps=10)
+    images = sd(prompts; n_images_per_prompt=3, n_inference_steps=50)
     for i in 1:size(images, 3)
         save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
     end
