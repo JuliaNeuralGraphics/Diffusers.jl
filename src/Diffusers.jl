@@ -104,19 +104,24 @@ include("stable_diffusion.jl")
 
 include("load_utils.jl")
 
-function mm()
-    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f32 |> cpu
+function main()
+    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
     println("Running StableDiffusion on $(get_backend(sd))")
 
-    prompts = ["wooden cat"]
-    images = sd(prompts; n_images_per_prompt=1, n_inference_steps=10)
-    for i in 1:size(images, 3)
-        save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
+    n_images_per_prompt = 1
+    prompts = ["painting of a farmer in the field"]
+    images = sd(prompts; n_images_per_prompt, n_inference_steps=20)
+
+    idx = 1
+    for prompt in prompts, i in 1:n_images_per_prompt
+        joined_prompt = replace(prompt, ' ' => '-')
+        save("$joined_prompt-$i.png", rotr90(RGB{N0f8}.(images[:, :, idx])))
+        idx += 1
     end
     return
 end
 
-function main()
+function debug()
     m = LayerNorm(320)
     lf = m |> f32 |> gpu
     lh = m |> f16 |> gpu

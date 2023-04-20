@@ -29,14 +29,19 @@ end
 Base.eltype(sd::StableDiffusion) = eltype(sd.unet.sin_embedding.emb)
 
 function (sd::StableDiffusion)(
-    prompt::Vector{String};
-    width::Int = 512, height::Int = 512,
+    prompt::Vector{String}, negative_prompt::Vector{String} = String[];
     n_inference_steps::Int = 50,
     n_images_per_prompt::Int = 1,
-    guidance_scale::Float32 = 7.5,
+    guidance_scale::Float32 = 7.5f0,
 )
-    prompt_embeds = _encode_prompt(sd, prompt; n_images_per_prompt)
+    width, height = 512, 512
+
+    classifier_free_guidance = guidance_scale > 1f0
+    prompt_embeds = _encode_prompt(
+        sd, prompt, negative_prompt; n_images_per_prompt,
+        classifier_free_guidance)
     GC.gc()
+
     set_timesteps!(sd.scheduler, n_inference_steps)
     GC.gc()
 
@@ -47,8 +52,17 @@ function (sd::StableDiffusion)(
     bar = get_pb(length(sd.scheduler.timesteps), "Diffusion process:")
     for t in sd.scheduler.timesteps
         timestep = Int32[t] |> get_backend(sd)
-        noise_pred = sd.unet(latents, timestep, prompt_embeds)
+        # Double latents for classifier free guidance.
+        latent_inputs = classifier_free_guidance ? cat(latents, latents; dims=4) : latents
+        noise_pred = sd.unet(latent_inputs, timestep, prompt_embeds)
         GC.gc()
+
+        # Perform guidance.
+        if classifier_free_guidance
+            noise_pred_uncond, noise_pred_text = MLUtils.chunk(noise_pred, 2; dims=4)
+            noise_pred = noise_pred_uncond .+ eltype(sd)(guidance_scale) .* (noise_pred_text .- noise_pred_uncond)
+        end
+
         latents = step!(sd.scheduler, noise_pred; t, sample=latents)
         GC.gc()
         next!(bar)
@@ -60,22 +74,39 @@ end
 Encode prompt into text encoder hidden states.
 """
 function _encode_prompt(
-    sd::StableDiffusion, prompt::Vector{String};
+    sd::StableDiffusion, prompt::Vector{String},
+    negative_prompt::Vector{String};
     context_length::Int = 77,
-    n_images_per_prompt::Int = 1,
+    n_images_per_prompt::Int,
+    classifier_free_guidance::Bool,
 )
     tokens, mask = tokenize(
         sd.tokenizer, prompt; add_start_end=true, context_length)
     tokens = Int32.(tokens) |> get_backend(sd)
 
-    # TODO transfer mask as well to backend
-    # prompt_embeds = sd.text_encoder(tokens; mask)
-    prompt_embeds = sd.text_encoder(tokens) # TODO conditionally use mask
+    prompt_embeds = sd.text_encoder(tokens #=, mask =#) # TODO conditionally use mask
     _, seq_len, batch = size(prompt_embeds)
     prompt_embeds = repeat(prompt_embeds; outer=(1, n_images_per_prompt, 1))
     prompt_embeds = reshape(prompt_embeds, :, seq_len, batch * n_images_per_prompt)
-    # TODO do classifier free guidance & negative prompt
 
+    if classifier_free_guidance
+        negative_prompt = isempty(negative_prompt) ?
+            fill("", length(prompt)) : negative_prompt
+        @assert length(negative_prompt) == length(prompt)
+
+        tokens, mask = tokenize(
+            sd.tokenizer, negative_prompt; add_start_end=true, context_length)
+        tokens = Int32.(tokens) |> get_backend(sd)
+
+        negative_prompt_embeds = sd.text_encoder(tokens #=, mask =#) # TODO conditionally use mask
+        _, seq_len, batch = size(negative_prompt_embeds)
+        negative_prompt_embeds = repeat(negative_prompt_embeds; outer=(1, n_images_per_prompt, 1))
+        negative_prompt_embeds = reshape(negative_prompt_embeds, :, seq_len, batch * n_images_per_prompt)
+
+        # For classifier free guidance we need to do 2 forward passes.
+        # Instead, concatenate embeds together and do 1.
+        prompt_embeds = cat(negative_prompt_embeds, prompt_embeds; dims=3)
+    end
     prompt_embeds
 end
 
