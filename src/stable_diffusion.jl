@@ -33,7 +33,7 @@ function (sd::StableDiffusion)(
     width::Int = 512, height::Int = 512,
     n_inference_steps::Int = 50,
     n_images_per_prompt::Int = 1,
-    # TODO guidance scale
+    guidance_scale::Float32 = 7.5,
 )
     prompt_embeds = _encode_prompt(sd, prompt; n_images_per_prompt)
     GC.gc()

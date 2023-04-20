@@ -45,24 +45,24 @@ get_pb(n, desc::String) = Progress(
 function (ln::LayerNorm)(x::AbstractArray)
     ϵ = convert(float(eltype(x)), ln.ϵ)
     μ, σ² = _normalize(x; dims=1:length(ln.size))
-    y = ln.diag((x .- μ) ./ sqrt.(σ² .+ ϵ))
+    y = ln.diag((x .- μ) .* inv.(sqrt.(σ² .+ ϵ)))
     sync_free!(μ, σ²)
     return y
 end
 
 function (gn::Flux.GroupNorm)(x::AbstractArray)
     sz = size(x)
-    x2 = reshape(x, sz[1:end-2]..., sz[end-1] ÷ gn.G, gn.G, sz[end])
+    x2 = reshape(x, sz[1:end - 2]..., sz[end - 1] ÷ gn.G, gn.G, sz[end])
     N = ndims(x2) # == ndims(x)+1
-    reduce_dims = 1:N-2
-    affine_shape = ntuple(i -> i ∈ (N-1, N-2) ? size(x2, i) : 1, N)
+    reduce_dims = 1:(N - 2)
+    affine_shape = ntuple(i -> i ∈ (N - 1, N - 2) ? size(x2, i) : 1, N)
 
     μ, σ² = _normalize(x2; dims=reduce_dims)
     γ = reshape(gn.γ, affine_shape)
     β = reshape(gn.β, affine_shape)
 
     ϵ = convert(float(eltype(x)), gn.ϵ)
-    scale = γ ./ sqrt.(σ² .+ ϵ)
+    scale = γ .* inv.(sqrt.(σ² .+ ϵ))
     bias = -scale .* μ .+ β
 
     sync_free!(μ, σ²)
@@ -105,14 +105,34 @@ include("stable_diffusion.jl")
 include("load_utils.jl")
 
 function mm()
-    println("Running StableDiffusion on $(Backend)")
-    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
+    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f32 |> cpu
+    println("Running StableDiffusion on $(get_backend(sd))")
 
-    prompts = ["painted car"]
-    images = sd(prompts; n_images_per_prompt=3, n_inference_steps=50)
+    prompts = ["wooden cat"]
+    images = sd(prompts; n_images_per_prompt=1, n_inference_steps=10)
     for i in 1:size(images, 3)
         save("image-$i.png", rotr90(RGB{N0f8}.(images[:, :, i])))
     end
+    return
+end
+
+function main()
+    m = LayerNorm(320)
+    lf = m |> f32 |> gpu
+    lh = m |> f16 |> gpu
+
+    x = rand(Float32, 320, 4096, 1)
+    xf = x |> f32 |> gpu
+    xh = x |> f16 |> gpu
+
+    y = m(x)
+    yf = lf(xf) |> cpu
+    yh = lh(xh) |> cpu |> f32
+
+    println()
+    @show sum(y)
+    @show sum(yf)
+    @show sum(yh)
     return
 end
 
