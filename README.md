@@ -8,6 +8,13 @@
 
 *"Painting of a farmer in the field"*
 
+### Installation
+
+1. Clone the repo.
+2. Launch Julia REPL from Diffusers.jl directory: `julia --threads=auto --project=.`
+3. Instantiate & update with `]up` command.
+4. **NOTE:** check [AMDGPU.jl Navi 2 support](https://amdgpu.juliagpu.org/dev/#Navi-2-(GFX103x)-support) section.
+
 ### Usage
 
 ```julia
