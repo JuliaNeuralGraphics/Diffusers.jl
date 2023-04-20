@@ -1,3 +1,4 @@
+using AMDGPU
 using Test
 using Diffusers
 using Flux
@@ -7,20 +8,37 @@ const STATE, CONFIG = Diffusers.load_pretrained_model(
     state_file="unet/diffusion_pytorch_model.bin",
     config_file="unet/config.json")
 
-@testset "Diffusers.jl" begin
-    @testset "Layer load utils" begin
-        include("layer_load_utils.jl")
+const CLIP_TEXT_MODEL = Diffusers.CLIPTextTransformer(
+    "runwayml/stable-diffusion-v1-5";
+    state_file="text_encoder/pytorch_model.bin",
+    config_file="text_encoder/config.json")
+
+include("model_load_utils.jl")
+include("clip.jl")
+include("schedulers.jl")
+
+@info "Flux GPU Backend: $(Flux.GPU_BACKEND)"
+
+@testset verbose=true "Diffusers.jl" begin
+    for fp in (f16,), device in (gpu,)
+        @info "Precision: $fp | Device: $device"
+
+        @testset verbose=true "Device: $device, Precision: $fp" begin
+            @testset "Model layers" begin
+                model_load_testsuite(device, fp)
+            end
+            # @testset "CLIP model" begin
+            #     clip_testsuite(device, fp)
+            # end
+            # @testset "Schedulers" begin
+            #     scheduler_testsuite(device, fp)
+            # end
+        end
     end
-    @testset "Model load utils" begin
-        include("model_load_utils.jl")
-    end
-    @testset "CLIP model" begin
-        include("clip.jl")
-    end
-    @testset "Schedulers" begin
-        include("schedulers.jl")
-    end
-    @testset "Tokenizers" begin
-        include("tokenizers.jl")
-    end
+    # @testset "Tokenizers" begin
+    #     include("tokenizers.jl")
+    # end
+    # @testset "Layer load utils" begin
+    #     include("layer_load_utils.jl")
+    # end
 end

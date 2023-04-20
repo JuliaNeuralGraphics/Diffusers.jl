@@ -38,13 +38,14 @@ has_sampler(::CrossAttnDownBlock2D{R, A, D}) where {R, A, D} = !(D <: typeof(ide
 function (cattn::CrossAttnDownBlock2D)(
     x::T, time_emb::Maybe{E} = nothing, context::Maybe{C} = nothing,
 ) where {
-    T <: AbstractArray{Float32, 4},
-    E <: AbstractArray{Float32, 2},
-    C <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
+    C <: AbstractArray{<:Real, 3},
 }
     function _chain(resnets::Tuple, attentions::Tuple, h)
-        h = first(resnets)(h, time_emb)
-        h = first(attentions)(h, context)
+        tmp = first(resnets)(h, time_emb)
+        h = first(attentions)(tmp, context)
+        sync_free!(tmp)
         (h, _chain(Base.tail(resnets), Base.tail(attentions), h)...)
     end
     _chain(::Tuple{}, ::Tuple{}, _) = ()
@@ -83,7 +84,8 @@ end
 has_sampler(::DownBlock2D{R, S}) where {R, S} = !(S <: typeof(identity))
 
 function (block::DownBlock2D)(x::T, temb::E) where {
-    T <: AbstractArray{Float32, 4}, E <: AbstractArray{Float32, 2},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
 }
     function _chain(blocks::Tuple, h)
         h = first(blocks)(h, temb)
@@ -136,14 +138,15 @@ end
 function (mid::CrossAttnMidBlock2D)(
     x::T, time_emb::Maybe{E} = nothing, context::Maybe{C} = nothing,
 ) where {
-    T <: AbstractArray{Float32, 4},
-    E <: AbstractArray{Float32, 2},
-    C <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
+    C <: AbstractArray{<:Real, 3},
 }
     x = mid.resnets[1](x, time_emb)
     for (resnet, attn) in zip(mid.resnets[2:end], mid.attentions)
-        x = attn(x, context)
-        x = resnet(x, time_emb)
+        tmp = attn(x, context)
+        x = resnet(tmp, time_emb)
+        sync_free!(tmp)
     end
     x
 end
@@ -175,12 +178,13 @@ function SamplerBlock2D{S}(
             embedding_scale_shift,
             n_groups, dropout, λ)
         for i in 1:n_layers]...)
+
     sampler = add_sampler ?
         S(out_channels; use_conv=true, pad=sampler_pad) : identity
     SamplerBlock2D(resnets, sampler)
 end
 
-function (block::SamplerBlock2D)(x::T) where T <: AbstractArray{Float32, 4}
+function (block::SamplerBlock2D)(x::T) where T <: AbstractArray{<:Real, 4}
     for rn in block.resnets
         x = rn(x, nothing)
     end
@@ -210,6 +214,7 @@ function MidBlock2D(
     λ = swish,
     scale::Float32 = 1f0,
     n_heads::Int = 1,
+    ϵ::Float32 = 1f-6,
 )
     resnets = [ResnetBlock2D(
         channels => channels; time_emb_channels, scale, embedding_scale_shift,
@@ -217,7 +222,7 @@ function MidBlock2D(
         for _ in 1:(n_layers + 1)]
     attentions = add_attention ?
         Chain([
-            Attention(channels; bias=true, n_heads, n_groups, scale)
+            Attention(channels; bias=true, n_heads, n_groups, scale, ϵ)
             for _ in 1:n_layers]...) : nothing
     MidBlock2D(Chain(resnets...), attentions)
 end
@@ -225,12 +230,13 @@ end
 function (mb::MidBlock2D{R, A})(
     x::T, time_embedding::Maybe{E} = nothing,
 ) where {
-    R, A, T <: AbstractArray{Float32, 4},
-    E <: AbstractMatrix{Float32},
+    R, A,
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractMatrix{<:Real},
 }
     x = mb.resnets[1](x, time_embedding)
     for i in 2:length(mb.resnets)
-        if A <: Nothing
+        if !(A <: Nothing)
             width, height, channels, batch = size(x)
             x = mb.attentions[i - 1](reshape(x, :, channels, batch))
             x = reshape(x, width, height, channels, batch)
@@ -279,9 +285,9 @@ end
 function (block::CrossAttnUpBlock2D)(
     x::T, skips, temb::Maybe{E} = nothing, context::Maybe{C} = nothing
 ) where {
-    T <: AbstractArray{Float32, 4},
-    E <: AbstractArray{Float32, 2},
-    C <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
+    C <: AbstractArray{<:Real, 3},
 }
     for (rn, attn) in zip(block.resnets, block.attentions)
         skip, skips = first(skips), Base.tail(skips)
@@ -324,11 +330,16 @@ function UpBlock2D(
 end
 
 function (block::UpBlock2D)(x::T, skips, temb::E) where {
-    T <: AbstractArray{Float32, 4}, E <: AbstractArray{Float32, 2},
+    T <: AbstractArray{<:Real, 4},
+    E <: AbstractArray{<:Real, 2},
 }
     for block in block.resnets
         skip, skips = first(skips), Base.tail(skips)
-        x = block(cat(x, skip; dims=3), temb)
+        tmp = cat(x, skip; dims=3)
+        x = block(tmp, temb)
+        sync_free!(tmp)
     end
-    block.sampler(x), skips
+    y = block.sampler(x)
+    sync_free!(x)
+    y, skips
 end

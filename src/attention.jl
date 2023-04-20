@@ -28,6 +28,7 @@ function Attention(dim::Int;
     cross_attention_norm::Bool = false,
     scale::Float32 = 1f0,
     dropout::Real = 0,
+    ϵ::Float32 = 1f-5,
 )
     cross_attention_norm && isnothing(context_dim) && throw(ArgumentError("""
         `context_dim` is `nothing`, but `cross_attention_norm` is `true`.
@@ -54,7 +55,7 @@ function Attention(dim::Int;
     norm = if is_cross_attention
         cross_attention_norm ? LayerNorm(context_dim) : identity
     else
-        isnothing(n_groups) ? identity : GroupNorm(dim, n_groups)
+        isnothing(n_groups) ? identity : GroupNorm(dim, n_groups; ϵ)
     end
 
     Attention(
@@ -65,8 +66,8 @@ end
 function (attn::Attention)(
     x::T, context::Maybe{C} = nothing; mask::Maybe{M} = nothing,
 ) where {
-    T <: AbstractArray{Float32, 3},
-    C <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 3},
+    C <: AbstractArray{<:Real, 3},
     M <: AbstractMatrix{Bool},
 }
     residual = x
@@ -77,15 +78,24 @@ function (attn::Attention)(
         attn.to_q(x), attn.to_k(c), attn.to_v(c)
     else
         x = attn.norm(x)
+        # TODO add doc that in this case input should be in (w * h, c, b)
+        x = permutedims(x, (2, 1, 3))
         attn.to_q(x), attn.to_k(x), attn.to_v(x)
     end
 
     mask = isnothing(mask) ? nothing :
         reshape(mask, size(mask, 1), 1, 1, size(mask, 2))
-    ω, _ = dot_product_attention(q, k, v; mask, nheads=attn.n_heads)
+    ω, α = dot_product_attention(q, k, v; mask, nheads=attn.n_heads)
 
-    o = attn.to_out(reshape(ω, :, seq_length, batch))
+    sync_free!(α, q, k, v)
+    isnothing(mask) || KernelAbstractions.unsafe_free!(mask)
+
+    cross_attention(attn) && (ω = reshape(ω, :, seq_length, batch);)
+    o = attn.to_out(ω)
+
+    sync_free!(ω)
     cross_attention(attn) && return o
 
-    (o .+ residual) ./ attn.scale
+    FP = eltype(x)
+    (permutedims(o, (2, 1, 3)) .+ residual) .* FP(inv(attn.scale))
 end

@@ -96,7 +96,10 @@ end
 function load_state!(layer::Flux.GroupNorm, state)
     layer.γ .= state.weight
     layer.β .= state.bias
-    return nothing
+end
+
+function load_state!(emb::Flux.Embedding, state)
+    copy!(emb.weight, transpose(state.weight))
 end
 
 function load_state!(attn::Attention, state; use_cross_attention::Bool = false)
@@ -285,8 +288,4 @@ end
 function load_state!(emb::CLIPTextEmbeddings, state)
     load_state!(emb.token_embedding, state.token_embedding)
     load_state!(emb.position_embedding, state.position_embedding)
-end
-
-function load_state!(emb::Embedding, state)
-    copy!(emb.weights, transpose(state.weight))
 end

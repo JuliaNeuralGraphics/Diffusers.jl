@@ -4,20 +4,26 @@ authors = ["Harish Anand"]
 version = "0.1.0"
 
 [deps]
+AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 HuggingFaceApi = "3cc741c3-0c9d-4fbe-84fa-cdec264173de"
+ImageCore = "a09fc81d-aa75-5fe9-8630-4744c3626534"
+ImageIO = "82e4d734-157c-48bb-816b-45c225c6df19"
+ImageMagick = "6218d12a-5da1-5696-b52f-db25d2ecc6d1"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
+NNlib = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Pickle = "fbb45041-c46e-462f-888f-7c521cafbc2c"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
-julia = "1"
-
-[extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test"]
+AMDGPU = "0.4.12"
+NNlib = "0.8.20"
+KernelAbstractions = "0.9.2"
+julia = "1.9"

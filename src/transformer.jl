@@ -40,21 +40,26 @@ end
 function (block::TransformerBlock)(
     x::T, context::Maybe{C} = nothing; mask::Maybe{M} = nothing,
 ) where {
-    T <: AbstractArray{Float32, 3},
-    C <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 3},
+    C <: AbstractArray{<:Real, 3},
     M <: AbstractMatrix{Bool},
 }
     xn = block.norm_1(x)
-    a1 = block.attention_1(
-        xn, block.only_cross_attention ? context : xn; mask)
+    a1 = block.attention_1(xn, block.only_cross_attention ? context : xn; mask)
     x = a1 .+ x
+    sync_free!(xn, a1)
 
     if block.attention_2 ≢ nothing
-        a2 = block.attention_2(block.norm_2(x), context; mask)
+        xn = block.norm_2(x)
+        a2 = block.attention_2(xn, context; mask)
         x = a2 .+ x
+        sync_free!(xn, a2)
     end
 
-    block.fwd(block.norm_3(x)) .+ x
+    xn = block.norm_3(x)
+    y = block.fwd(xn) .+ x
+    sync_free!(xn)
+    return y
 end
 
 struct Transformer2D{N, P, B}
@@ -95,8 +100,7 @@ function Transformer2D(;
 end
 
 function (tr::Transformer2D)(x::T, context::Maybe{C} = nothing) where {
-    T <: AbstractArray{Float32, 4},
-    C <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 4}, C <: AbstractArray{<:Real, 3},
 }
     width, height, channels, batch = size(x)
     residual = x
@@ -114,7 +118,9 @@ function (tr::Transformer2D)(x::T, context::Maybe{C} = nothing) where {
     end
 
     for block in tr.transformer_blocks
-        x = block(x, context)
+        xn = block(x, context)
+        sync_free!(x)
+        x = xn
     end
 
     if tr.use_linear_projection
@@ -127,5 +133,7 @@ function (tr::Transformer2D)(x::T, context::Maybe{C} = nothing) where {
         x = tr.proj_out(x)
     end
 
-    x .+ residual
+    y = x .+ residual
+    sync_free!(x)
+    return y
 end

@@ -48,18 +48,20 @@ function encode(tk::CLIPTokenizer, text::String)
     bpe_tokens
 end
 
-# TODO longet text context length
+# TODO longest text context length
+# TODO encode in Int32 from start
 function tokenize(
     tk::CLIPTokenizer, texts::Vector{String};
     context_length::Int, truncate::Bool = false,
     add_start_end::Bool = false,
 )
     n = length(texts)
-    encodings = [encode(tk,
-        add_start_end ? "<|startoftext|> $text <|endoftext|>" : text)
+    encodings = [
+        encode(tk, add_start_end ? "<|startoftext|> $text <|endoftext|>" : text)
         for text in texts]
 
-    tokens = zeros(Int64, context_length, n)
+    eof_token = tk.encoder["<|endoftext|>"]
+    tokens = fill(eof_token, context_length, n)
     pad_mask = fill(false, context_length, n)
     for (i, enc) in enumerate(encodings)
         if length(enc) > context_length
@@ -80,7 +82,7 @@ end
 function decode(
     tk::CLIPTokenizer, tokens::T;
     remove_start_end::Bool = true, ignore_padding::Bool = true,
-) where T <: AbstractVector{Int64}
+) where T <: AbstractVector{Int64} # TODO Int32
     if remove_start_end
         eof_tokens = (tk.encoder["<|startoftext|>"], tk.encoder["<|endoftext|>"])
         tokens = [t for t in tokens if !(t in eof_tokens)]

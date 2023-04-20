@@ -1,4 +1,4 @@
-quick_gelu(x) = x * sigmoid(1.702f0 * x)
+quick_gelu(x::T) where T = x * sigmoid(T(1.702f0) * x)
 
 struct CLIPMLP{F1, F2}
     fc1::F1
@@ -10,7 +10,7 @@ function CLIPMLP(dims::Pair{Int, Int}, λ = quick_gelu)
     CLIPMLP(Dense(dims, λ), Dense(reverse(dims)))
 end
 
-function (mlp::CLIPMLP)(x::T) where T <: AbstractArray{Float32, 3}
+function (mlp::CLIPMLP)(x::T) where T <: AbstractArray{<:Real, 3}
     mlp.fc2(mlp.fc1(x))
 end
 
@@ -41,7 +41,7 @@ end
 function (attn::CLIPAttention)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing,
 ) where {
-    T <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 3},
     M1 <: AbstractMatrix{Bool},
     M2 <: AbstractMatrix{Bool},
 }
@@ -84,7 +84,7 @@ end
 function (enc::CLIPEncoderLayer)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing,
 ) where {
-    T <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 3},
     M1 <: AbstractMatrix{Bool},
     M2 <: AbstractMatrix{Bool},
 }
@@ -116,7 +116,7 @@ end
 function (enc::CLIPEncoder)(
     x::T; mask::Maybe{M1} = nothing, causal_mask::Maybe{M2} = nothing
 ) where {
-    T <: AbstractArray{Float32, 3},
+    T <: AbstractArray{<:Real, 3},
     M1 <: AbstractMatrix{Bool},
     M2 <: AbstractMatrix{Bool},
 }
@@ -133,6 +133,10 @@ struct CLIPTextTransformer{B, E, L}
 end
 Flux.@functor CLIPTextTransformer
 
+function get_backend(tr::CLIPTextTransformer)
+    typeof(tr.embeddings.token_embedding.weight) <: Array ? cpu : gpu
+end
+
 function CLIPTextTransformer(;
     vocab_size::Int, embed_dim::Int, max_position_embeddings::Int,
     n_heads::Int, num_hidden_layers::Int, intermediate_size::Int,
@@ -146,16 +150,13 @@ function CLIPTextTransformer(;
     CLIPTextTransformer(embeddings, encoder, final_layer_norm)
 end
 
-function (transformer::CLIPTextTransformer)(
-    input_ids::I; mask::Maybe{M} = nothing,
-) where {
-    I <: AbstractMatrix{Int32},
-    M <: AbstractMatrix{Bool},
+function (tr::CLIPTextTransformer)(input_ids::I; mask::Maybe{M} = nothing) where {
+    I <: AbstractMatrix{Int32}, M <: AbstractMatrix{Bool},
 }
-    x = transformer.embeddings(input_ids)
-    causal_mask = make_causal_mask(input_ids; dims=1)
-    x = transformer.encoder(x; mask, causal_mask)
-    transformer.final_layer_norm(x)
+    x = tr.embeddings(input_ids)
+    causal_mask = make_causal_mask(input_ids; dims=1) |> get_backend(tr)
+    x = tr.encoder(x; mask, causal_mask)
+    tr.final_layer_norm(x)
 end
 
 # HGF integration.

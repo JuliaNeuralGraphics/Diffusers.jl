@@ -27,7 +27,7 @@ function Encoder(
         push!(down_blocks, SamplerBlock2D{Downsample2D}(
             input_channels => output_channels;
             n_groups, n_layers=n_block_layers,
-            add_sampler=!is_final, λ))
+            sampler_pad=0, add_sampler=!is_final, λ))
     end
 
     mid_block = MidBlock2D(
@@ -43,11 +43,12 @@ function Encoder(
     Encoder(conv_in, conv_out, norm, Chain(down_blocks...), mid_block)
 end
 
-function (enc::Encoder)(x::T) where T <: AbstractArray{Float32, 4}
+function (enc::Encoder)(x::T) where T <: AbstractArray{<:Real, 4}
     x = enc.conv_in(x)
     x = enc.down_blocks(x)
     x = enc.mid_block(x)
-    enc.conv_out(enc.norm(x))
+    x = enc.norm(x)
+    enc.conv_out(x)
 end
 
 struct Decoder{C1, C2, N, U, M}
@@ -94,7 +95,7 @@ function Decoder(
     Decoder(conv_in, conv_out, norm, Chain(up_blocks...), mid_block)
 end
 
-function (dec::Decoder)(x::T) where T <: AbstractArray{Float32, 4}
+function (dec::Decoder)(x::T) where T <: AbstractArray{<:Real, 4}
     x = dec.conv_in(x)
     x = dec.mid_block(x)
     x = dec.up_blocks(x)
@@ -124,7 +125,7 @@ end
 # Kullback–Leibler divergence.
 function kl(
     dg::DiagonalGaussian{T}, other::Maybe{DiagonalGaussian{T}} = nothing,
-) where T <: AbstractArray{Float32, 4}
+) where T <: AbstractArray{<:Real, 4}
     dims = (1, 2, 3)
     0.5f0 .* (isnothing(other) ?
         sum(dg.μ.^2 .+ dg.ν .- dg.log_σ .- 1f0; dims) :
