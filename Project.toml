@@ -1,6 +1,6 @@
 name = "Diffusers"
 uuid = "8a41e116-7555-4e59-b311-944c7420dac5"
-authors = ["Harish Anand"]
+authors = ["Anton Smirnov <tonysmn97@gmail.com>", "Harish Anand"]
 version = "0.1.0"
 
 [deps]

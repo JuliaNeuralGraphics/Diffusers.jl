@@ -4,7 +4,7 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaNeuralGraphics.github.io/Diffusers.jl/dev)
 [![Build Status](https://github.com/JuliaNeuralGraphics/Diffusers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaNeuralGraphics/Diffusers.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-![painting-of-a-farmer-in-the-field](https://user-images.githubusercontent.com/17990405/233398391-40dfc481-c05d-44e4-9535-b31b86b2dcf1.png)
+![painting-of-a-farmer-in-the-field-2](https://user-images.githubusercontent.com/17990405/233843029-2b8e1c22-51c1-4782-bdfd-b16177065bea.png)
 
 *"Painting of a farmer in the field"*
 
