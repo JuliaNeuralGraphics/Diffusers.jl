@@ -1,0 +1,5 @@
+[AMDGPU]
+use_artifacts = false
+
+[Flux]
+gpu_backend = "AMD"

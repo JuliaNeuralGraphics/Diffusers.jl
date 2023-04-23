@@ -30,7 +30,7 @@ Base.eltype(sd::StableDiffusion) = eltype(sd.unet.sin_embedding.emb)
 
 function (sd::StableDiffusion)(
     prompt::Vector{String}, negative_prompt::Vector{String} = String[];
-    n_inference_steps::Int = 50,
+    n_inference_steps::Int = 20,
     n_images_per_prompt::Int = 1,
     guidance_scale::Float32 = 7.5f0,
 )

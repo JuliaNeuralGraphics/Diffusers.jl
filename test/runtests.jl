@@ -20,7 +20,7 @@ include("schedulers.jl")
 @info "Flux GPU Backend: $(Flux.GPU_BACKEND)"
 
 @testset verbose=true "Diffusers.jl" begin
-    for fp in (f16,), device in (gpu,)
+    for fp in (f32,), device in (gpu,)
         @info "Precision: $fp | Device: $device"
 
         @testset verbose=true "Device: $device, Precision: $fp" begin

@@ -108,7 +108,7 @@ function main()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
     println("Running StableDiffusion on $(get_backend(sd))")
 
-    n_images_per_prompt = 1
+    n_images_per_prompt = 2
     prompts = ["painting of a farmer in the field"]
     images = sd(prompts; n_images_per_prompt, n_inference_steps=20)
 
@@ -118,26 +118,6 @@ function main()
         save("$joined_prompt-$i.png", rotr90(RGB{N0f8}.(images[:, :, idx])))
         idx += 1
     end
-    return
-end
-
-function debug()
-    m = LayerNorm(320)
-    lf = m |> f32 |> gpu
-    lh = m |> f16 |> gpu
-
-    x = rand(Float32, 320, 4096, 1)
-    xf = x |> f32 |> gpu
-    xh = x |> f16 |> gpu
-
-    y = m(x)
-    yf = lf(xf) |> cpu
-    yh = lh(xh) |> cpu |> f32
-
-    println()
-    @show sum(y)
-    @show sum(yf)
-    @show sum(yh)
     return
 end
 
