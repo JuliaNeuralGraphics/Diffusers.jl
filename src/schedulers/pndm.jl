@@ -68,12 +68,9 @@ function PNDMScheduler(nd::Int;
         n_train_timesteps)
 end
 
-# TODO checnge to adapt_structure
-# TODO define Flux._isleaf(scheduler) = true
-for T in (FluxDeviceAdaptors..., FluxEltypeAdaptors...)
-    @eval function Adapt.adapt_storage(to::$(T), pndm::PNDMScheduler)
-        PNDMScheduler(
-            Adapt.adapt(to, pndm.α̂),
+function Adapt.adapt_structure(to, pndm::PNDMScheduler)
+    PNDMScheduler(
+        Adapt.adapt(to, pndm.α̂),
             pndm.α, pndm.α̅, pndm.β,
             pndm.α_final, pndm.σ₀, pndm.skip_prk_steps, pndm.step_offset,
             pndm.timesteps, pndm.prk_timesteps, pndm.plms_timesteps,
@@ -84,8 +81,9 @@ for T in (FluxDeviceAdaptors..., FluxEltypeAdaptors...)
             [Adapt.adapt(to, x) for x in pndm.xs],
 
             pndm.n_train_timesteps, pndm.n_inference_timesteps, pndm.counter)
-    end
 end
+
+Flux._isleaf(::PNDMScheduler) = true
 
 Base.ndims(::PNDMScheduler{A, S}) where {A, S} = ndims(S)
 

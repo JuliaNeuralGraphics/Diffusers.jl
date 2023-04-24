@@ -25,15 +25,6 @@ end
 
 const Maybe{T} = Union{Nothing, T}
 
-# TODO better way of handling this
-const FluxDeviceAdaptors = (
-    Flux.FluxCPUAdaptor,
-    Flux.FluxCUDAAdaptor,
-    Flux.FluxAMDAdaptor)
-const FluxEltypeAdaptors = (
-    Flux.FluxEltypeAdaptor{Float32},
-    Flux.FluxEltypeAdaptor{Float16})
-
 get_pb(n, desc::String) = Progress(
     n; desc, dt=1, barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:white)
 
@@ -109,8 +100,8 @@ function main()
     println("Running StableDiffusion on $(get_backend(sd))")
 
     n_images_per_prompt = 2
-    prompts = ["painting of a farmer in the field"]
-    images = sd(prompts; n_images_per_prompt, n_inference_steps=20)
+    prompts = ["painting of a dancing girl van gogh"]
+    images = sd(prompts; n_images_per_prompt, n_inference_steps=50)
 
     idx = 1
     for prompt in prompts, i in 1:n_images_per_prompt
