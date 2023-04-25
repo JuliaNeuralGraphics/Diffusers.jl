@@ -100,8 +100,8 @@ function main()
     println("Running StableDiffusion on $(get_backend(sd))")
 
     n_images_per_prompt = 2
-    prompts = ["painting of a dancing girl van gogh"]
-    images = sd(prompts; n_images_per_prompt, n_inference_steps=50)
+    prompts = ["painting of a dome leonardo da vinchi"]
+    images = sd(prompts; n_images_per_prompt, n_inference_steps=20)
 
     idx = 1
     for prompt in prompts, i in 1:n_images_per_prompt
