@@ -8,6 +8,14 @@
 
 *"Painting of a farmer in the field"*
 
+|Painting of a Dome Da Vinchi|Painting of a Dome Da Vinchi|Painting of a Dome Van Gogh|Painting of a Dome Van Gogh|
+|-|-|-|-|
+|![painting-of-a-dome-leonardo-da-vinchi-2](https://user-images.githubusercontent.com/17990405/234356486-7c15f543-f805-4f04-9eba-5e72a561b195.png)|![painting-of-a-dome-leonardo-da-vinchi-1](https://user-images.githubusercontent.com/17990405/234356507-5f78a5ca-fd9c-41ae-8fe8-53545ed652d1.png)|![painting-of-a-dome-van-gogh-2](https://user-images.githubusercontent.com/17990405/234356529-6505d3b1-63e3-4480-9ff9-e4393fe51e17.png)|![painting-of-a-dome-van-gogh-2 (copy)](https://user-images.githubusercontent.com/17990405/234356543-dfb95537-d41b-4606-bf16-02233b321974.png)|
+
+|Refractive spheres sunlight|Refractive spheres|Thunder in mountains dark clouds|Edo era computer|
+|-|-|-|-|
+|![refractive-spheres-sunlight-1](https://user-images.githubusercontent.com/17990405/234356847-b057a1ec-ff2f-41a3-9f90-3195f0dbbb06.png)|![refractive-spheres-1](https://user-images.githubusercontent.com/17990405/234356875-304049c2-60aa-42a6-a717-c71d1e75031f.png)|![thunder-in-mountains-dark-clouds-1](https://user-images.githubusercontent.com/17990405/234356895-cbae5f00-2738-426f-b776-92759143a464.png)|![edo-era-computer-1](https://user-images.githubusercontent.com/17990405/234356929-8cfa3a22-ac7f-4ecd-9125-fc7f92e69f59.png)|
+
 ### Installation
 
 1. Clone the repo.
