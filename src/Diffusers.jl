@@ -19,8 +19,8 @@ using KernelAbstractions
 const Backend = ROCBackend()
 
 function sync_free!(args...)
-    KernelAbstractions.synchronize(Backend)
     KernelAbstractions.unsafe_free!.(args)
+    KernelAbstractions.synchronize(Backend)
 end
 
 const Maybe{T} = Union{Nothing, T}
@@ -99,8 +99,8 @@ function main()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
     println("Running StableDiffusion on $(get_backend(sd))")
 
-    n_images_per_prompt = 2
-    prompts = ["painting of a dome leonardo da vinchi"]
+    n_images_per_prompt = 1
+    prompts = ["painting of a farmer in the field"]
     images = sd(prompts; n_images_per_prompt, n_inference_steps=20)
 
     idx = 1
