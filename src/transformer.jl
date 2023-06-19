@@ -46,19 +46,21 @@ function (block::TransformerBlock)(
 }
     xn = block.norm_1(x)
     a1 = block.attention_1(xn, block.only_cross_attention ? context : xn; mask)
+    sync_free!(xn)
     x = a1 .+ x
-    sync_free!(xn, a1)
+    sync_free!(a1)
 
     if block.attention_2 ≢ nothing
         xn = block.norm_2(x)
         a2 = block.attention_2(xn, context; mask)
+        sync_free!(xn)
         x = a2 .+ x
-        sync_free!(xn, a2)
+        sync_free!(a2)
     end
 
     xn = block.norm_3(x)
     y = block.fwd(xn) .+ x
-    sync_free!(xn)
+    sync_free!(xn, x)
     return y
 end
 
@@ -109,12 +111,14 @@ function (tr::Transformer2D)(x::T, context::Maybe{C} = nothing) where {
 
     if tr.use_linear_projection
         x = reshape(x, :, channels, batch)
-        x = permutedims(x, (2, 1, 3))
-        x = tr.proj_in(x)
+        x_perm = permutedims(x, (2, 1, 3))
+        x = tr.proj_in(x_perm)
+        sync_free!(x_perm)
     else
         x = tr.proj_in(x)
-        x = reshape(x, :, size(x, 3), batch)
-        x = permutedims(x, (2, 1, 3))
+        x_res = reshape(x, :, size(x, 3), batch)
+        x = permutedims(x_res, (2, 1, 3))
+        sync_free!(x_res)
     end
 
     for block in tr.transformer_blocks
@@ -124,13 +128,15 @@ function (tr::Transformer2D)(x::T, context::Maybe{C} = nothing) where {
     end
 
     if tr.use_linear_projection
-        x = tr.proj_out(x)
-        x = permutedims(x, (2, 1, 3))
+        x_proj = tr.proj_out(x)
+        x = permutedims(x_proj, (2, 1, 3))
+        sync_free!(x_proj)
         x = reshape(x, width, height, :, batch)
     else
         x = permutedims(x, (2, 1, 3))
-        x = reshape(x, width, height, :, batch)
-        x = tr.proj_out(x)
+        x_res = reshape(x, width, height, :, batch)
+        x = tr.proj_out(x_res)
+        sync_free!(x_res)
     end
 
     y = x .+ residual

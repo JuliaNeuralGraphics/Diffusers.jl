@@ -21,10 +21,11 @@ Pickle = "fbb45041-c46e-462f-888f-7c521cafbc2c"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+VideoIO = "d6d074c3-1acf-5d4c-9a43-ef38773959a2"
 
 [compat]
 AMDGPU = "0.4.13"
-NNlib = "0.8.20"
 Flux = "0.13.16"
 KernelAbstractions = "0.9.2"
+NNlib = "0.8.20"
 julia = "1.9"

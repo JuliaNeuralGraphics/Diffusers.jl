@@ -30,24 +30,31 @@ Base.eltype(sd::StableDiffusion) = eltype(sd.unet.sin_embedding.emb)
 
 function (sd::StableDiffusion)(
     prompt::Vector{String}, negative_prompt::Vector{String} = String[];
-    n_inference_steps::Int = 20,
-    n_images_per_prompt::Int = 1,
+    n_inference_steps::Int = 20, n_images_per_prompt::Int = 1,
     guidance_scale::Float32 = 7.5f0,
 )
     width, height = 512, 512
-
     classifier_free_guidance = guidance_scale > 1f0
-    prompt_embeds = _encode_prompt(
-        sd, prompt, negative_prompt; n_images_per_prompt,
-        classifier_free_guidance)
+
+    prompt_embeds = _encode_prompt(sd, prompt; n_images_per_prompt)
+    if classifier_free_guidance
+        negative_prompt = isempty(negative_prompt) ?
+            fill("", length(prompt)) : negative_prompt
+        prompt_embeds = cat(
+            _encode_prompt(sd, negative_prompt; n_images_per_prompt),
+            prompt_embeds; dims=3)
+    end
     GC.gc()
+    KernelAbstractions.synchronize(Backend)
 
     set_timesteps!(sd.scheduler, n_inference_steps)
     GC.gc()
+    KernelAbstractions.synchronize(Backend)
 
     batch = length(prompt) * n_images_per_prompt
     latents = _prepare_latents(sd; shape=(width, height, 4, batch))
     GC.gc()
+    KernelAbstractions.synchronize(Backend)
 
     bar = get_pb(length(sd.scheduler.timesteps), "Diffusion process:")
     for t in sd.scheduler.timesteps
@@ -56,6 +63,7 @@ function (sd::StableDiffusion)(
         latent_inputs = classifier_free_guidance ? cat(latents, latents; dims=4) : latents
         noise_pred = sd.unet(latent_inputs, timestep, prompt_embeds)
         GC.gc()
+        KernelAbstractions.synchronize(Backend)
 
         # Perform guidance.
         if classifier_free_guidance
@@ -65,20 +73,119 @@ function (sd::StableDiffusion)(
 
         latents = step!(sd.scheduler, noise_pred; t, sample=latents)
         GC.gc()
+        KernelAbstractions.synchronize(Backend)
         next!(bar)
     end
     return _decode_latents(sd, latents)
+end
+
+function clip(
+    sd::StableDiffusion, prompts::Vector{String};
+    n_inference_steps::Int = 20, n_interpolation_steps::Int = 24,
+    guidance_scale::Float32 = 7.5f0,
+)
+    width, height = 512, 512
+    classifier_free_guidance = guidance_scale > 1f0
+
+    negative_prompt_embeds = classifier_free_guidance ?
+        _encode_prompt(sd, [""]; n_images_per_prompt=1) :
+        nothing
+
+    original_latents = _prepare_latents(sd; shape=(width, height, 4, 1))
+    GC.gc()
+    KernelAbstractions.synchronize(Backend)
+
+    interpolation_range = collect(0f0:(1f0 / n_interpolation_steps):1f0)
+    interpolation_range[end] = 1f0
+
+    writer = open_video_out(
+        "video.mp4", zeros(RGB{N0f8}, 512, 512);
+        framerate=n_interpolation_steps,
+        target_pix_fmt=VideoIO.AV_PIX_FMT_YUV420P)
+
+    set_timesteps!(sd.scheduler, n_inference_steps)
+    GC.gc()
+    KernelAbstractions.synchronize(Backend)
+
+    n_steps =
+        (length(prompts) - 1) * length(interpolation_range) *
+        length(sd.scheduler.timesteps)
+    bar = get_pb(n_steps, "Diffusion Video process:")
+
+    frame_idx = 1
+
+    for prompt_idx in 1:(length(prompts) - 1)
+        p1 = _encode_prompt(sd, [prompts[prompt_idx]]; n_images_per_prompt=1)
+        GC.gc()
+        KernelAbstractions.synchronize(Backend)
+        p2 = _encode_prompt(sd, [prompts[prompt_idx + 1]]; n_images_per_prompt=1)
+        GC.gc()
+        KernelAbstractions.synchronize(Backend)
+
+        for α in interpolation_range
+            GC.gc()
+            AMDGPU.HIP.device_synchronize()
+            AMDGPU.HIP.reclaim()
+
+            set_timesteps!(sd.scheduler, n_inference_steps)
+            GC.gc()
+            KernelAbstractions.synchronize(Backend)
+
+            T = eltype(p1)
+            prompt_embeds = T(1f0 - α) .* p1 .+ T(α) .* p2
+            prompt_embeds = cat(negative_prompt_embeds, prompt_embeds; dims=3)
+            GC.gc()
+            KernelAbstractions.synchronize(Backend)
+
+            latents = copy(original_latents)
+
+            for t in sd.scheduler.timesteps
+                GC.gc()
+                KernelAbstractions.synchronize(Backend)
+
+                timestep = Int32[t] |> get_backend(sd)
+                # Double latents for classifier free guidance.
+                latent_inputs = classifier_free_guidance ? cat(latents, latents; dims=4) : latents
+                noise_pred = sd.unet(latent_inputs, timestep, prompt_embeds)
+                GC.gc()
+                KernelAbstractions.synchronize(Backend)
+
+                # Perform guidance.
+                if classifier_free_guidance
+                    noise_pred_uncond, noise_pred_text = MLUtils.chunk(noise_pred, 2; dims=4)
+                    noise_pred = noise_pred_uncond .+ T(guidance_scale) .* (noise_pred_text .- noise_pred_uncond)
+                end
+                GC.gc()
+                KernelAbstractions.synchronize(Backend)
+
+                latents = step!(sd.scheduler, noise_pred; t, sample=latents)
+                GC.gc()
+                KernelAbstractions.synchronize(Backend)
+
+                next!(bar)
+            end
+
+            images = _decode_latents(sd, latents)
+            GC.gc()
+            KernelAbstractions.synchronize(Backend)
+
+            video_frame = rotr90(RGB{N0f8}.(images[:, :, 1]))
+            save("frame-$frame_idx.png", video_frame)
+            write(writer, video_frame)
+            frame_idx += 1
+        end
+    end
+
+    close_video_out!(writer)
+    return
 end
 
 """
 Encode prompt into text encoder hidden states.
 """
 function _encode_prompt(
-    sd::StableDiffusion, prompt::Vector{String},
-    negative_prompt::Vector{String};
-    context_length::Int = 77,
-    n_images_per_prompt::Int,
-    classifier_free_guidance::Bool,
+    sd::StableDiffusion, prompt::Vector{String};
+    context_length::Int = 77, n_images_per_prompt::Int,
 )
     tokens, mask = tokenize(
         sd.tokenizer, prompt; add_start_end=true, context_length)
@@ -87,27 +194,7 @@ function _encode_prompt(
     prompt_embeds = sd.text_encoder(tokens #=, mask =#) # TODO conditionally use mask
     _, seq_len, batch = size(prompt_embeds)
     prompt_embeds = repeat(prompt_embeds; outer=(1, n_images_per_prompt, 1))
-    prompt_embeds = reshape(prompt_embeds, :, seq_len, batch * n_images_per_prompt)
-
-    if classifier_free_guidance
-        negative_prompt = isempty(negative_prompt) ?
-            fill("", length(prompt)) : negative_prompt
-        @assert length(negative_prompt) == length(prompt)
-
-        tokens, mask = tokenize(
-            sd.tokenizer, negative_prompt; add_start_end=true, context_length)
-        tokens = Int32.(tokens) |> get_backend(sd)
-
-        negative_prompt_embeds = sd.text_encoder(tokens #=, mask =#) # TODO conditionally use mask
-        _, seq_len, batch = size(negative_prompt_embeds)
-        negative_prompt_embeds = repeat(negative_prompt_embeds; outer=(1, n_images_per_prompt, 1))
-        negative_prompt_embeds = reshape(negative_prompt_embeds, :, seq_len, batch * n_images_per_prompt)
-
-        # For classifier free guidance we need to do 2 forward passes.
-        # Instead, concatenate embeds together and do 1.
-        prompt_embeds = cat(negative_prompt_embeds, prompt_embeds; dims=3)
-    end
-    prompt_embeds
+    reshape(prompt_embeds, :, seq_len, batch * n_images_per_prompt)
 end
 
 function _prepare_latents(sd::StableDiffusion; shape::NTuple{4, Int})

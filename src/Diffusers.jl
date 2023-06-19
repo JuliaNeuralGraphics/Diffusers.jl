@@ -13,6 +13,7 @@ using ImageIO
 using OrderedCollections
 using ProgressMeter
 using Statistics
+using VideoIO
 
 using AMDGPU
 using KernelAbstractions
@@ -20,7 +21,6 @@ const Backend = ROCBackend()
 
 function sync_free!(args...)
     KernelAbstractions.unsafe_free!.(args)
-    KernelAbstractions.synchronize(Backend)
 end
 
 const Maybe{T} = Union{Nothing, T}
@@ -96,6 +96,10 @@ include("stable_diffusion.jl")
 include("load_utils.jl")
 
 function main()
+    GC.gc()
+    AMDGPU.HIP.device_synchronize()
+    AMDGPU.HIP.reclaim()
+
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
     println("Running StableDiffusion on $(get_backend(sd))")
 
@@ -109,6 +113,19 @@ function main()
         save("$joined_prompt-$i.png", rotr90(RGB{N0f8}.(images[:, :, idx])))
         idx += 1
     end
+    return
+end
+
+function main_clip()
+    GC.gc()
+    AMDGPU.HIP.device_synchronize()
+    AMDGPU.HIP.reclaim()
+
+    sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
+    println("Running StableDiffusion on $(get_backend(sd))")
+
+    prompts = ["ancient house", "old house", "modern house", "futuristic house", "flying house"]
+    clip(sd, prompts; n_inference_steps=10, n_interpolation_steps=24)
     return
 end
 
