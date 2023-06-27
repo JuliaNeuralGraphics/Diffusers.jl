@@ -44,17 +44,11 @@ function (sd::StableDiffusion)(
             _encode_prompt(sd, negative_prompt; n_images_per_prompt),
             prompt_embeds; dims=3)
     end
-    GC.gc()
-    KernelAbstractions.synchronize(Backend)
 
     set_timesteps!(sd.scheduler, n_inference_steps)
-    GC.gc()
-    KernelAbstractions.synchronize(Backend)
 
     batch = length(prompt) * n_images_per_prompt
     latents = _prepare_latents(sd; shape=(width, height, 4, batch))
-    GC.gc()
-    KernelAbstractions.synchronize(Backend)
 
     bar = get_pb(length(sd.scheduler.timesteps), "Diffusion process:")
     for t in sd.scheduler.timesteps
@@ -62,8 +56,6 @@ function (sd::StableDiffusion)(
         # Double latents for classifier free guidance.
         latent_inputs = classifier_free_guidance ? cat(latents, latents; dims=4) : latents
         noise_pred = sd.unet(latent_inputs, timestep, prompt_embeds)
-        GC.gc()
-        KernelAbstractions.synchronize(Backend)
 
         # Perform guidance.
         if classifier_free_guidance
@@ -72,8 +64,6 @@ function (sd::StableDiffusion)(
         end
 
         latents = step!(sd.scheduler, noise_pred; t, sample=latents)
-        GC.gc()
-        KernelAbstractions.synchronize(Backend)
         next!(bar)
     end
     return _decode_latents(sd, latents)
@@ -92,8 +82,6 @@ function clip(
         nothing
 
     original_latents = _prepare_latents(sd; shape=(width, height, 4, 1))
-    GC.gc()
-    KernelAbstractions.synchronize(Backend)
 
     interpolation_range = collect(0f0:(1f0 / n_interpolation_steps):1f0)
     interpolation_range[end] = 1f0
@@ -104,8 +92,6 @@ function clip(
         target_pix_fmt=VideoIO.AV_PIX_FMT_YUV420P)
 
     set_timesteps!(sd.scheduler, n_inference_steps)
-    GC.gc()
-    KernelAbstractions.synchronize(Backend)
 
     n_steps =
         (length(prompts) - 1) * length(interpolation_range) *
@@ -116,58 +102,35 @@ function clip(
 
     for prompt_idx in 1:(length(prompts) - 1)
         p1 = _encode_prompt(sd, [prompts[prompt_idx]]; n_images_per_prompt=1)
-        GC.gc()
-        KernelAbstractions.synchronize(Backend)
         p2 = _encode_prompt(sd, [prompts[prompt_idx + 1]]; n_images_per_prompt=1)
-        GC.gc()
-        KernelAbstractions.synchronize(Backend)
 
         for α in interpolation_range
-            GC.gc()
-            AMDGPU.HIP.device_synchronize()
-            AMDGPU.HIP.reclaim()
-
             set_timesteps!(sd.scheduler, n_inference_steps)
-            GC.gc()
-            KernelAbstractions.synchronize(Backend)
 
             T = eltype(p1)
             prompt_embeds = T(1f0 - α) .* p1 .+ T(α) .* p2
             prompt_embeds = cat(negative_prompt_embeds, prompt_embeds; dims=3)
-            GC.gc()
-            KernelAbstractions.synchronize(Backend)
 
             latents = copy(original_latents)
 
             for t in sd.scheduler.timesteps
-                GC.gc()
-                KernelAbstractions.synchronize(Backend)
 
                 timestep = Int32[t] |> get_backend(sd)
                 # Double latents for classifier free guidance.
                 latent_inputs = classifier_free_guidance ? cat(latents, latents; dims=4) : latents
                 noise_pred = sd.unet(latent_inputs, timestep, prompt_embeds)
-                GC.gc()
-                KernelAbstractions.synchronize(Backend)
 
                 # Perform guidance.
                 if classifier_free_guidance
                     noise_pred_uncond, noise_pred_text = MLUtils.chunk(noise_pred, 2; dims=4)
                     noise_pred = noise_pred_uncond .+ T(guidance_scale) .* (noise_pred_text .- noise_pred_uncond)
                 end
-                GC.gc()
-                KernelAbstractions.synchronize(Backend)
 
                 latents = step!(sd.scheduler, noise_pred; t, sample=latents)
-                GC.gc()
-                KernelAbstractions.synchronize(Backend)
-
                 next!(bar)
             end
 
             images = _decode_latents(sd, latents)
-            GC.gc()
-            KernelAbstractions.synchronize(Backend)
 
             video_frame = rotr90(RGB{N0f8}.(images[:, :, 1]))
             save("frame-$frame_idx.png", video_frame)

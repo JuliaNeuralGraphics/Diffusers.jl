@@ -13,7 +13,6 @@ end
 function (t::TimestepEmbedding)(x::T) where T <: AbstractMatrix{<:Real}
     tmp = t.linear1(x)
     y = t.linear2(tmp)
-    sync_free!(tmp)
     return y
 end
 
@@ -40,9 +39,7 @@ function (emb::SinusoidalEmbedding{E})(timesteps::T) where {
 }
     emb = emb.emb .* reshape(timesteps, 1, :)
     cos_emb, sin_emb = cos.(emb), sin.(emb)
-    sync_free!(emb)
 
     y = cat(cos_emb, sin_emb; dims=1)
-    sync_free!(cos_emb, sin_emb)
     return y
 end

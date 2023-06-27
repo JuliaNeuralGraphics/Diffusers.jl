@@ -87,13 +87,9 @@ function (attn::Attention)(
         reshape(mask, size(mask, 1), 1, 1, size(mask, 2))
     ω, α = dot_product_attention(q, k, v; mask, nheads=attn.n_heads)
 
-    sync_free!(α, q, k, v)
-    isnothing(mask) || KernelAbstractions.unsafe_free!(mask)
-
     cross_attention(attn) && (ω = reshape(ω, :, seq_length, batch);)
     o = attn.to_out(ω)
 
-    sync_free!(ω)
     cross_attention(attn) && return o
 
     FP = eltype(x)

@@ -119,7 +119,6 @@ function (block::ResnetBlock2D)(x::T, time_embedding::Maybe{E}) where {
     if time_embedding ≢ nothing && block.embedding_scale_shift
         scale, shift = MLUtils.chunk(time_embedding, 2; dims=3)
         x = x .* (one(TI) .+ scale) .+ shift
-        sync_free!(scale, shift)
     end
 
     block.out_proj(x) .+ block.conv_shortcut(skip) .* TI(inv(block.scale))

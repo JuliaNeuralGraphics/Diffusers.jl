@@ -19,10 +19,6 @@ using AMDGPU
 using KernelAbstractions
 const Backend = ROCBackend()
 
-function sync_free!(args...)
-    KernelAbstractions.unsafe_free!.(args)
-end
-
 const Maybe{T} = Union{Nothing, T}
 
 get_pb(n, desc::String) = Progress(
@@ -37,7 +33,6 @@ function (ln::LayerNorm)(x::AbstractArray)
     ϵ = convert(float(eltype(x)), ln.ϵ)
     μ, σ² = _normalize(x; dims=1:length(ln.size))
     y = ln.diag((x .- μ) .* inv.(sqrt.(σ² .+ ϵ)))
-    sync_free!(μ, σ²)
     return y
 end
 
@@ -56,7 +51,6 @@ function (gn::Flux.GroupNorm)(x::AbstractArray)
     scale = γ .* inv.(sqrt.(σ² .+ ϵ))
     bias = -scale .* μ .+ β
 
-    sync_free!(μ, σ²)
     return reshape(gn.λ.(scale .* x2 .+ bias), sz)
 end
 
@@ -64,7 +58,6 @@ function _normalize(x::AbstractArray{Float16}; dims)
     x_fp32 = Float32.(x)
     μ, σ² = _normalize(x_fp32; dims)
     m, v = Float16.(μ), Float16.(σ²)
-    sync_free!(x_fp32, μ, σ²)
     return m, v
 end
 
@@ -124,7 +117,9 @@ function main_clip()
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
     println("Running StableDiffusion on $(get_backend(sd))")
 
-    prompts = ["ancient house", "old house", "modern house", "futuristic house", "flying house"]
+    prompts = [
+        "ancient house", "old house", "modern house",
+        "futuristic house", "cyberpunk house"]
     clip(sd, prompts; n_inference_steps=10, n_interpolation_steps=24)
     return
 end
