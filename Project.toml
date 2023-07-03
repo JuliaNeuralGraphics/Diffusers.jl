@@ -24,8 +24,6 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 VideoIO = "d6d074c3-1acf-5d4c-9a43-ef38773959a2"
 
 [compat]
-AMDGPU = "0.4.13"
-Flux = "0.13.16"
+Flux = "0.13.17"
 KernelAbstractions = "0.9.2"
-NNlib = "0.8.20"
 julia = "1.9"
