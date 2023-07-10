@@ -13,7 +13,7 @@ Provides text-to-image StableDiffusion implementation.
 
 |Refractive spheres sunlight|Refractive spheres|Thunder in mountains dark clouds|Edo era computer|
 |-|-|-|-|
-|![refractive-spheres-sunlight-1](https://user-images.githubusercontent.com/17990405/234356847-b057a1ec-ff2f-41a3-9f90-3195f0dbbb06.png)|![refractive-spheres-1](https://user-images.githubusercontent.com/17990405/234356875-304049c2-60aa-42a6-a717-c71d1e75031f.png)|![thunder-in-mountains-dark-clouds-1](https://user-images.githubusercontent.com/17990405/234356895-cbae5f00-2738-426f-b776-92759143a464.png)|![edo-era-computer-1](https://user-images.githubusercontent.com/17990405/234356929-8cfa3a22-ac7f-4ecd-9125-fc7f92e69f59.png)|
+|![refractive-spheres-sunlight-1](https://user-images.githubusercontent.com/17990405/234356847-b057a1ec-ff2f-41a3-9f90-3195f0dbbb06.png)|![refractive-spheres-1](https://user-images.githubusercontent.com/17990405/234356875-304049c2-60aa-42a6-a717-c71d1e75031f.png)|![thunder-in-mountains-dark-clouds-1](https://github.com/JuliaNeuralGraphics/Diffusers.jl/assets/17990405/ff0c0993-8f20-44f8-b892-0bdbf8da4d1a)|![edo-era-computer-1](https://github.com/JuliaNeuralGraphics/Diffusers.jl/assets/17990405/90e9c46d-239a-4d32-8d7f-9d424c0aab58)|
 
 ### Installation
 
