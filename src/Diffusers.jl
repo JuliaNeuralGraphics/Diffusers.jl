@@ -5,6 +5,7 @@ import MLUtils
 import Pickle
 
 using Adapt
+using AMDGPU
 using FileIO
 using Flux
 using HuggingFaceApi
@@ -14,10 +15,6 @@ using OrderedCollections
 using ProgressMeter
 using Statistics
 using VideoIO
-
-using AMDGPU
-using KernelAbstractions
-const Backend = ROCBackend()
 
 const Maybe{T} = Union{Nothing, T}
 
