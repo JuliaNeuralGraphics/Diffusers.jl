@@ -20,7 +20,6 @@ Provides text-to-image StableDiffusion implementation.
 1. Clone the repo.
 2. Launch Julia REPL from Diffusers.jl directory: `julia --threads=auto --project=.`
 3. Instantiate & update with `]up` command.
-4. **NOTE:** check [AMDGPU.jl Navi 2 support](https://amdgpu.juliagpu.org/dev/#Navi-2-(GFX103x)-support) section.
 
 ### Usage
 
@@ -39,9 +38,6 @@ Edit prompts in the `Diffusers.main` function and re-run it to generate new imag
 Create `LocalPreferences.toml` file in Diffusers.jl directory with the following content:
 
 ```toml
-[AMDGPU]
-use_artifacts = false
-
 [Flux]
 gpu_backend = "AMD"
 ```
