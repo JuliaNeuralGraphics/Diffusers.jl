@@ -5,7 +5,6 @@ import MLUtils
 import Pickle
 
 using Adapt
-using AMDGPU
 using FileIO
 using Flux
 using HuggingFaceApi
@@ -42,17 +41,19 @@ include("stable_diffusion.jl")
 
 include("load_utils.jl")
 
-function main()
-    GC.gc()
-    AMDGPU.HIP.device_synchronize()
-    AMDGPU.HIP.reclaim()
+function main(
+    prompts::Vector{String};
+    n_inference_steps::Int = 20,
+    n_images_per_prompt::Int = 1,
+    precision = f16, device = gpu,
+)
+    GC.gc(false)
+    GC.gc(true)
 
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
     println("Running StableDiffusion on $(get_backend(sd))")
 
-    n_images_per_prompt = 1
-    prompts = ["painting of a farmer in the field"]
-    images = sd(prompts; n_images_per_prompt, n_inference_steps=20)
+    images = sd(prompts; n_images_per_prompt, n_inference_steps)
 
     idx = 1
     for prompt in prompts, i in 1:n_images_per_prompt
@@ -64,9 +65,8 @@ function main()
 end
 
 function main_clip()
-    GC.gc()
-    AMDGPU.HIP.device_synchronize()
-    AMDGPU.HIP.reclaim()
+    GC.gc(false)
+    GC.gc(true)
 
     sd = StableDiffusion("runwayml/stable-diffusion-v1-5") |> f16 |> gpu
     println("Running StableDiffusion on $(get_backend(sd))")

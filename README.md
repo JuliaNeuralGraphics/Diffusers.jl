@@ -18,31 +18,24 @@ Provides text-to-image StableDiffusion implementation.
 ### Installation
 
 1. Clone the repo.
-2. Launch Julia REPL from Diffusers.jl directory: `julia --threads=auto --project=.`
+2. Launch Julia REPL from Diffusers.jl directory:
+```bash
+julia --threads=auto --project=.
+```
 3. Instantiate & update with `]up` command.
 
 ### Usage
 
 ```julia
-using Revise
-using Diffusers
-Diffusers.main()
+julia> using AMDGPU # For AMD GPU support
+julia> using CUDA   # For Nvidia GPU support
+
+julia> using Flux
+julia> Flux.gpu_backend!("AMDGPU") # For AMD GPU support
+julia> Flux.gpu_backend!("CUDA") # For Nvidia GPU support
+
+julia> using Diffusers
+julia> Diffusers.main(["painting of a farmer in the field"]; device=gpu, precision=f16)
 ```
 
-Edit prompts in the `Diffusers.main` function and re-run it to generate new images.
-
-### GPU selection
-
-- AMDGPU:
-
-Create `LocalPreferences.toml` file in Diffusers.jl directory with the following content:
-
-```toml
-[Flux]
-gpu_backend = "AMD"
-```
-
-Double check that AMDGPU uses system ROCm instead of artifacts by calling `AMDGPU.versioninfo()`.
-
-- CUDA: not yet supported.
- 
+Images are saved in the Diffusers.jl directory.
